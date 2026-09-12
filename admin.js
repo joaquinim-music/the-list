@@ -101,8 +101,88 @@ async function loadCompletions(){
   });
 }
 
-function renderBaseline(){const el=$("admin-baseline-list");if(!el)return;el.innerHTML=baseline.map((l,i)=>`<div class="admin-row baseline-admin-row" draggable="true" data-id="${l.id}"><span class="drag-grip">☰</span><span class="baseline-rank">#${i+1}</span><div class="admin-main"><strong>${esc(l.name)}</strong><span class="muted">ID ${l.id} · Rating ${Number(l.rating).toFixed(0)}</span></div></div>`).join('')||`<p class="muted">No baseline levels yet.</p>`;el.querySelectorAll('.baseline-admin-row').forEach(row=>{row.addEventListener('dragstart',()=>{draggingRow=row;row.classList.add('dragging')});row.addEventListener('dragend',()=>{row.classList.remove('dragging');draggingRow=null;rebuildBaselineFromDom()});row.addEventListener('dragover',e=>{e.preventDefault();if(!draggingRow||draggingRow===row)return;const r=row.getBoundingClientRect();if(e.clientY>r.top+r.height/2)row.after(draggingRow);else row.before(draggingRow)});row.addEventListener('drop',e=>{e.preventDefault();rebuildBaselineFromDom();renderBaseline()})})}
-function rebuildBaselineFromDom(){baseline=[...document.querySelectorAll('#admin-baseline-list .baseline-admin-row')].map(r=>levels.find(l=>Number(l.id)===Number(r.dataset.id))).filter(Boolean)}
+function renderBaseline(){
+  const el=$("admin-baseline-list");
+  if(!el)return;
+
+  // Show EVERY level. Saved baseline levels come first; new levels follow them.
+  const ordered=[...levels].sort((a,b)=>{
+    const ar=a.baseline_rank ?? Number.MAX_SAFE_INTEGER;
+    const br=b.baseline_rank ?? Number.MAX_SAFE_INTEGER;
+    return ar-br || Number(b.rating||0)-Number(a.rating||0) ||
+      String(a.name||"").localeCompare(String(b.name||""));
+  });
+
+  baseline=ordered;
+
+  el.innerHTML=ordered.map((l,i)=>`
+    <div class="admin-row baseline-admin-row" draggable="true" data-id="${l.id}">
+      <span class="drag-grip" title="Drag to reorder">☰</span>
+      <span class="baseline-rank">#${i+1}</span>
+      <div class="admin-main">
+        <strong>${esc(l.name)}</strong>
+        <span class="muted">ID ${l.id} · ${esc(l.creator||"Unknown")} · Rating ${Number(l.rating||0).toFixed(0)}${l.baseline_rank ? " · Saved baseline" : " · New / unranked"}</span>
+      </div>
+    </div>`).join("") || `<p class="muted">No levels yet.</p>`;
+
+  attachBaselineDragHandlers();
+  updateBaselinePositions();
+}
+
+function attachBaselineDragHandlers(){
+  const list=$("admin-baseline-list");
+  if(!list)return;
+
+  list.querySelectorAll(".baseline-admin-row").forEach(row=>{
+    row.addEventListener("dragstart",e=>{
+      draggingRow=row;
+      row.classList.add("dragging");
+      if(e.dataTransfer){
+        e.dataTransfer.effectAllowed="move";
+        e.dataTransfer.setData("text/plain",row.dataset.id);
+      }
+    });
+
+    row.addEventListener("dragend",()=>{
+      row.classList.remove("dragging");
+      draggingRow=null;
+      rebuildBaselineFromDom();
+    });
+
+    row.addEventListener("dragover",e=>{
+      e.preventDefault();
+      if(!draggingRow||draggingRow===row)return;
+
+      const rect=row.getBoundingClientRect();
+      if(e.clientY > rect.top + rect.height/2){
+        row.after(draggingRow);
+      }else{
+        row.before(draggingRow);
+      }
+      updateBaselinePositions();
+    });
+
+    row.addEventListener("drop",e=>{
+      e.preventDefault();
+      rebuildBaselineFromDom();
+      updateBaselinePositions();
+    });
+  });
+}
+
+function updateBaselinePositions(){
+  document.querySelectorAll("#admin-baseline-list .baseline-admin-row").forEach((row,i)=>{
+    const rank=row.querySelector(".baseline-rank");
+    if(rank)rank.textContent="#"+(i+1);
+  });
+}
+
+function rebuildBaselineFromDom(){
+  baseline=[...document.querySelectorAll("#admin-baseline-list .baseline-admin-row")]
+    .map(row=>levels.find(l=>Number(l.id)===Number(row.dataset.id)))
+    .filter(Boolean);
+  updateBaselinePositions();
+}
 
 $("save-admin-baseline").onclick=async()=>{
   const ids=baseline.map(x=>Number(x.id));

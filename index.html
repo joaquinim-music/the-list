@@ -20,7 +20,7 @@ button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weigh
 .pos{font-size:20px;font-weight:bold;color:#8d98ae;text-align:center}.name{font-weight:bold}.meta{font-size:12px;color:#808ba0;margin-top:3px}.rating{text-align:right;font-weight:bold}.comp{text-align:right;color:#9da7ba;font-size:13px}
 .row button{padding:7px 10px;font-size:12px}.empty{text-align:center;padding:25px;color:#8994aa}.stats{display:flex;gap:20px;flex-wrap:wrap;color:#adb6c8;font-size:14px}.admin{border-color:#574b2c}.baseline-help{font-size:13px;color:#9da7ba;line-height:1.5}.status{min-height:20px;margin-top:10px;color:#aeb7c9}
 .connection{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-size:13px;color:#aeb7c9}.dot{width:9px;height:9px;border-radius:50%;background:#777}.dot.online{background:#61d48a}
-.owner-login{display:flex;gap:10px;flex-wrap:wrap}.owner-login input{min-width:220px}.owner-badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#2b3242;color:#cfd6e5;font-size:12px;margin-bottom:12px}.baseline-count{margin-top:10px;color:#aeb7c9;font-size:13px}
+.owner-login{display:flex;gap:10px;flex-wrap:wrap}.owner-login input{min-width:220px}.owner-badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#2b3242;color:#cfd6e5;font-size:12px;margin-bottom:12px}.baseline-count{margin-top:10px;color:#aeb7c9;font-size:13px}.baseline-list{display:flex;flex-direction:column;gap:8px;margin:14px 0;max-height:520px;overflow:auto;padding-right:4px}.baseline-item{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;background:#11151d;border:1px solid #303747;border-radius:10px;padding:10px 12px;cursor:grab;user-select:none}.baseline-item:active{cursor:grabbing}.baseline-item.dragging{opacity:.45}.drag-handle{font-size:20px;color:#7f8aa0;text-align:center}.baseline-item .name{font-weight:bold}.baseline-item .meta{font-size:12px;color:#808ba0;margin-top:3px}.baseline-position{font-weight:bold;color:#aeb7c9;min-width:38px;text-align:right}.baseline-empty{padding:18px;text-align:center;color:#8994aa;border:1px dashed #343c4f;border-radius:10px}
 @media(max-width:720px){.compare{grid-template-columns:1fr}.vs{height:20px}.row{grid-template-columns:45px 1fr 80px}.row .comp,.row .remove{display:none}h1{font-size:32px}.owner-login{flex-direction:column}.owner-login input,.owner-login button{width:100%}}
 </style>
 </head>
@@ -67,8 +67,8 @@ button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weigh
 
 <div id="ownerEditor" style="display:none">
   <div class="owner-badge">👑 Owner controls unlocked</div>
-  <p class="baseline-help">Put one level ID per line, from hardest (#1) to easiest. Save it to make this the shared owner baseline. Levels must already be on The List.</p>
-  <textarea id="baselineInput" placeholder="10565740&#10;3976338&#10;4284015"></textarea>
+  <p class="baseline-help">All levels on The List are loaded automatically. Drag and drop them from hardest (#1) to easiest. New levels appear at the bottom until you place them.</p>
+  <div id="baselineList" class="baseline-list"></div>
   <div class="controls" style="margin-top:10px">
     <button class="primary" onclick="saveBaseline()">💾 Save Shared Baseline</button>
     <button onclick="loadBaseline()">↻ Reload Baseline</button>
@@ -196,33 +196,58 @@ async function ownerLogout(){
   document.getElementById("ownerLoginStatus").textContent="Logged out.";
 }
 
+let baselineOrder=[];
+
+function renderBaselineEditor(){
+  const list=document.getElementById("baselineList");
+  if(!list)return;
+  const byId=new Map(levels.map(l=>[String(l.id),l]));
+  const ordered=[];
+  const seen=new Set();
+  for(const id of baselineOrder){const level=byId.get(String(id));if(level&&!seen.has(String(id))){ordered.push(level);seen.add(String(id));}}
+  for(const level of levels){if(!seen.has(String(level.id))){ordered.push(level);seen.add(String(level.id));}}
+  if(!ordered.length){list.innerHTML='<div class="baseline-empty">No levels have been added to The List yet.</div>';document.getElementById("baselineCount").textContent="0 levels shown.";return;}
+  list.innerHTML=ordered.map((l,i)=>`<div class="baseline-item" draggable="true" data-id="${Number(l.id)}"><div class="drag-handle">☰</div><div><div class="name">${escapeHTML(l.name)}</div><div class="meta">ID ${escapeHTML(l.id)}${i<baselineOrder.length?' • Saved in baseline':' • New / unranked'}</div></div><div class="baseline-position">#${i+1}</div></div>`).join("");
+  attachBaselineDragHandlers();
+  document.getElementById("baselineCount").textContent=`${ordered.length} level${ordered.length===1?'':'s'} shown. Drag to reorder; new levels are automatically included.`;
+}
+
+function attachBaselineDragHandlers(){
+  const list=document.getElementById("baselineList");
+  let dragged=null;
+  list.querySelectorAll('.baseline-item').forEach(item=>{
+    item.addEventListener('dragstart',()=>{dragged=item;item.classList.add('dragging')});
+    item.addEventListener('dragend',()=>{item.classList.remove('dragging');dragged=null;rebuildBaselineOrderFromDOM()});
+    item.addEventListener('dragover',e=>{e.preventDefault();if(!dragged||dragged===item)return;const rect=item.getBoundingClientRect();if(e.clientY>rect.top+rect.height/2)item.after(dragged);else item.before(dragged);});
+  });
+}
+
+function rebuildBaselineOrderFromDOM(){
+  baselineOrder=[...document.querySelectorAll('#baselineList .baseline-item')].map(x=>Number(x.dataset.id));
+  [...document.querySelectorAll('#baselineList .baseline-position')].forEach((el,i)=>el.textContent='#'+(i+1));
+}
+
 async function loadBaseline(){
-  const status=document.getElementById("baselineStatus"),count=document.getElementById("baselineCount");
+  const status=document.getElementById("baselineStatus");
   status.textContent="Loading shared baseline...";
   const {data,error}=await db.from("owner_baseline").select("level_id,baseline_rank").order("baseline_rank",{ascending:true});
-  if(error){status.textContent="Could not load baseline: "+error.message;return}
-  document.getElementById("baselineInput").value=(data||[]).map(x=>x.level_id).join("\n");
-  count.textContent=`${(data||[]).length} level${(data||[]).length===1?"":"s"} in the shared baseline.`;
+  if(error){status.textContent="Could not load baseline: "+error.message;return;}
+  baselineOrder=(data||[]).map(x=>Number(x.level_id));
+  renderBaselineEditor();
   status.textContent="Shared baseline loaded.";
 }
 
 async function saveBaseline(){
   const status=document.getElementById("baselineStatus");
-  const raw=document.getElementById("baselineInput").value.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean);
-  const ids=[];
-  for(const value of raw){
-    const id=Number(value);
-    if(!Number.isSafeInteger(id)||id<1){status.textContent=`Invalid level ID: ${value}`;return}
-    if(ids.includes(id)){status.textContent=`Level ID ${id} appears more than once.`;return}
-    ids.push(id);
-  }
-  const missing=ids.filter(id=>!levels.some(l=>l.id===id));
-  if(missing.length){status.textContent=`These IDs are not on The List: ${missing.join(", ")}`;return}
-  if(!confirm(`Save ${ids.length} level${ids.length===1?"":"s"} as the shared owner baseline?`))return;
+  rebuildBaselineOrderFromDOM();
+  const ids=baselineOrder.filter(id=>levels.some(l=>l.id===id));
+  if(!ids.length){status.textContent="Add at least one level before saving the baseline.";return;}
+  if(!confirm(`Save ${ids.length} level${ids.length===1?'':'s'} in this order as the shared owner baseline?`))return;
   status.textContent="Saving shared baseline...";
   const {data,error}=await db.rpc("set_owner_baseline",{p_level_ids:ids});
-  if(error){status.textContent="Could not save baseline: "+error.message;return}
-  status.textContent=`Saved ${data.count} baseline position${data.count===1?"":"s"} to Supabase.`;
+  if(error){status.textContent="Could not save baseline: "+error.message;return;}
+  baselineOrder=ids;
+  status.textContent=`Saved ${data.count} baseline position${data.count===1?'':'s'} to Supabase.`;
   await refresh();
   await loadBaseline();
 }
@@ -248,7 +273,7 @@ async function refresh(){
     document.getElementById("connectionDot").classList.add("online");
     document.getElementById("connectionText").textContent="Connected to the shared ranking";
     document.getElementById("stats").innerHTML=`${levels.length} levels • Shared community rankings`;
-    renderList();await renderCompare();
+    renderList();await renderCompare();if(ownerUser) renderBaselineEditor();
   }catch(e){
     document.getElementById("connectionDot").classList.remove("online");
     document.getElementById("connectionText").textContent="Database connection failed";
@@ -271,5 +296,4 @@ db.auth.onAuthStateChange(async (event,session)=>{
 (async()=>{await refresh();await restoreOwnerSession();})();
 </script>
 </body>
-</html>
 </html>

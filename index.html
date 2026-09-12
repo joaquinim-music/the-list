@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The List — Geometry Dash Difficulty Ranking</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:Arial,Helvetica,sans-serif;
+    background:#101217;color:#f4f6fb;
+  }
+  header{
+    background:linear-gradient(135deg,#202633,#151922);
+    border-bottom:2px solid #343b4b;padding:28px 20px;text-align:center;
+  }
+  h1{margin:0;font-size:42px;letter-spacing:2px}
+  header p{margin:8px 0 0;color:#aeb7c9}
+  main{max-width:1100px;margin:0 auto;padding:22px}
+  .panel{
+    background:#191d26;border:1px solid #303747;border-radius:14px;
+    padding:20px;margin-bottom:20px;box-shadow:0 8px 25px #0004;
+  }
+  h2{margin:0 0 14px}
+  .muted{color:#9da7ba}
+  .controls{display:flex;gap:10px;flex-wrap:wrap}
+  input,button,textarea{
+    font:inherit;border-radius:9px;border:1px solid #394153;
+  }
+  input,textarea{
+    background:#0f1218;color:#fff;padding:11px 12px;outline:none;
+  }
+  input{flex:1;min-width:180px}
+  textarea{width:100%;min-height:130px;resize:vertical}
+  button{
+    background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;
+    font-weight:bold;
+  }
+  button:hover{filter:brightness(1.15)}
+  .primary{background:#5968ff;border-color:#6977ff}
+  .danger{background:#642d38}
+  .compare{
+    display:grid;grid-template-columns:1fr 70px 1fr;gap:14px;align-items:stretch;
+  }
+  .level-card{
+    background:#11151d;border:2px solid #343c4f;border-radius:14px;
+    padding:22px;text-align:center;display:flex;flex-direction:column;
+    justify-content:space-between;min-height:250px;
+  }
+  .level-card h3{font-size:25px;margin:4px 0 8px}
+  .id{color:#8994aa;font-size:13px}
+  .rank{font-size:18px;margin:12px 0}
+  .vs{display:flex;align-items:center;justify-content:center;font-size:24px;color:#707b91}
+  .vote{
+    width:100%;font-size:18px;padding:15px 10px;
+    background:#3f4fe2;border-color:#5564ff;
+  }
+  .hint{text-align:center;color:#aeb7c9;margin:13px 0 0}
+  .list{display:flex;flex-direction:column;gap:9px}
+  .row{
+    display:grid;grid-template-columns:55px 1fr 90px 120px 90px;
+    gap:12px;align-items:center;background:#11151d;border:1px solid #2e3545;
+    border-radius:10px;padding:12px 14px;
+  }
+  .pos{font-size:20px;font-weight:bold;color:#8d98ae;text-align:center}
+  .name{font-weight:bold}.meta{font-size:12px;color:#808ba0;margin-top:3px}
+  .rating{text-align:right;font-weight:bold}.comp{text-align:right;color:#9da7ba;font-size:13px}
+  .row button{padding:7px 10px;font-size:12px}
+  .empty{text-align:center;padding:25px;color:#8994aa}
+  .stats{display:flex;gap:20px;flex-wrap:wrap;color:#adb6c8;font-size:14px}
+  .admin{border-color:#574b2c}
+  .baseline-help{font-size:13px;color:#9da7ba;line-height:1.5}
+  .status{min-height:20px;margin-top:10px;color:#aeb7c9}
+  @media(max-width:720px){
+    .compare{grid-template-columns:1fr}
+    .vs{height:20px}
+    .row{grid-template-columns:45px 1fr 80px}
+    .row .comp,.row .remove{display:none}
+    h1{font-size:32px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>THE LIST</h1>
+  <p>One list. Every level. Ranked by the community.</p>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>⚔️ Compare Levels</h2>
+    <p class="muted">Pick the level you think is harder. Comparisons are matched against nearby levels so each vote gives the ranking useful information.</p>
+    <div id="compareArea"></div>
+    <div class="hint" id="compareHint"></div>
+  </section>
+
+  <section class="panel">
+    <h2>➕ Add a Level</h2>
+    <div class="controls">
+      <input id="nameInput" placeholder="Level name">
+      <input id="idInput" placeholder="Geometry Dash ID" inputmode="numeric">
+      <button class="primary" onclick="addLevel()">Add Level</button>
+    </div>
+    <div class="status" id="addStatus"></div>
+  </section>
+
+  <section class="panel">
+    <h2>🔎 Search</h2>
+    <input id="searchInput" placeholder="Search by level name or ID..." oninput="renderList()">
+  </section>
+
+  <section class="panel">
+    <div style="display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap">
+      <div>
+        <h2 style="margin-bottom:4px">🏆 The List</h2>
+        <div class="stats" id="stats"></div>
+      </div>
+      <button onclick="resetDemo()">Reset demo data</button>
+    </div>
+    <div style="height:14px"></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <section class="panel admin">
+    <h2>🛠️ Owner Baseline</h2>
+    <p class="baseline-help">
+      This is ready for your owner ranking. Put one level ID per line, from hardest (#1) to easiest.
+      Applying it seeds the ratings in that order while keeping the baseline position stored separately.
+      This is local to this browser for now.
+    </p>
+    <textarea id="baselineInput" placeholder="Example:
+24000000
+12345678
+87654321"></textarea>
+    <div class="controls" style="margin-top:10px">
+      <button onclick="applyBaseline()">Apply Owner Baseline</button>
+    </div>
+    <div class="status" id="baselineStatus"></div>
+  </section>
+</main>
+
+<script>
+const STORAGE = "theListV2";
+const K = 32;
+
+const demo = [
+  {name:"Bloodbath", id:"10565740", rating:1850, comparisons:0, baselineRank:null},
+  {name:"Cataclysm", id:"3976338", rating:1800, comparisons:0, baselineRank:null},
+  {name:"Nine Circles", id:"4284015", rating:1700, comparisons:0, baselineRank:null},
+  {name:"A Completely Normal Challenge", id:"90000001", rating:1550, comparisons:0, baselineRank:null},
+  {name:"Random 5-Star", id:"90000002", rating:1450, comparisons:0, baselineRank:null}
+];
+
+let state = loadState();
+
+function loadState(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(STORAGE));
+    if(saved && Array.isArray(saved.levels)){
+      saved.levels.forEach(l=>{
+        if(l.rating == null) l.rating = 1500 + (Number(l.score)||0);
+        if(l.comparisons == null) l.comparisons = 0;
+        if(l.baselineRank == null) l.baselineRank = null;
+      });
+      if(!Array.isArray(saved.history)) saved.history=[];
+      return saved;
+    }
+  }catch(e){}
+  return {levels: structuredClone(demo), history:[]};
+}
+
+function save(){
+  localStorage.setItem(STORAGE, JSON.stringify(state));
+}
+
+function sortedLevels(){
+  return [...state.levels].sort((a,b)=>b.rating-a.rating);
+}
+
+function rankOf(id){
+  return sortedLevels().findIndex(x=>x.id===id)+1;
+}
+
+function expected(a,b){
+  return 1/(1+Math.pow(10,(b.rating-a.rating)/400));
+}
+
+function pairKey(a,b){
+  return [String(a),String(b)].sort().join("|");
+}
+
+function chooseComparison(){
+  const levels = sortedLevels();
+  if(levels.length < 2) return null;
+
+  // Prioritize levels with fewer comparisons, while preferring opponents nearby in rating.
+  const pool = [...levels].sort((a,b)=>{
+    const ca=(a.comparisons||0), cb=(b.comparisons||0);
+    if(ca!==cb) return ca-cb;
+    return Math.random()-0.5;
+  });
+
+  const target = pool[Math.floor(Math.random()*Math.min(3,pool.length))];
+  const candidates = levels.filter(x=>x.id!==target.id)
+    .sort((a,b)=>{
+      const da=Math.abs(a.rating-target.rating), db=Math.abs(b.rating-target.rating);
+      const ah=state.history.includes(pairKey(target.id,a.id));
+      const bh=state.history.includes(pairKey(target.id,b.id));
+      if(ah!==bh) return ah?1:-1;
+      return da-db;
+    });
+
+  return [target,candidates[0]];
+}
+
+let currentPair = null;
+
+function renderCompare(){
+  const area=document.getElementById("compareArea");
+  const hint=document.getElementById("compareHint");
+
+  if(state.levels.length<2){
+    area.innerHTML='<div class="empty">Add at least two levels to start comparing.</div>';
+    hint.textContent="";
+    return;
+  }
+
+  currentPair=chooseComparison();
+  const [a,b]=currentPair;
+  hint.textContent=`These are currently around #${rankOf(a.id)} and #${rankOf(b.id)}.`;
+
+  area.innerHTML=`
+    <div class="compare">
+      ${cardHTML(a)}
+      <div class="vs">VS</div>
+      ${cardHTML(b)}
+    </div>`;
+}
+
+function cardHTML(l){
+  return `<div class="level-card">
+    <div>
+      <div class="id">ID ${escapeHTML(l.id)}</div>
+      <h3>${escapeHTML(l.name)}</h3>
+      <div class="rank">Current rank: <b>#${rankOf(l.id)}</b></div>
+      <div class="id">${l.comparisons||0} comparison${(l.comparisons||0)==1?"":"s"}</div>
+    </div>
+    <button class="vote" onclick="vote('${jsEscape(l.id)}')">⬆ This is harder</button>
+  </div>`;
+}
+
+function vote(winnerId){
+  if(!currentPair) return;
+  const [a,b]=currentPair;
+  if(winnerId!==a.id && winnerId!==b.id) return;
+
+  const winner=state.levels.find(x=>x.id===winnerId);
+  const loser=winner.id===a.id ? b : a;
+
+  const ea=expected(winner,loser);
+  winner.rating += K*(1-ea);
+  loser.rating += K*(0-(1-ea));
+  winner.comparisons=(winner.comparisons||0)+1;
+  loser.comparisons=(loser.comparisons||0)+1;
+
+  state.history.push(pairKey(winner.id,loser.id));
+  if(state.history.length>500) state.history=state.history.slice(-500);
+
+  save();
+  renderAll();
+}
+
+function addLevel(){
+  const name=document.getElementById("nameInput").value.trim();
+  const id=document.getElementById("idInput").value.trim();
+  const status=document.getElementById("addStatus");
+
+  if(!name || !id){status.textContent="Please enter both a name and ID.";return;}
+  if(state.levels.some(l=>l.id===id)){status.textContent="That level ID is already on The List.";return;}
+
+  const ratings=state.levels.map(l=>l.rating);
+  const initial=ratings.length ? ratings.reduce((a,b)=>a+b,0)/ratings.length : 1500;
+
+  state.levels.push({name,id,rating:initial,comparisons:0,baselineRank:null});
+  save();
+  document.getElementById("nameInput").value="";
+  document.getElementById("idInput").value="";
+  status.textContent=`Added "${name}" near the current middle of the list.`;
+  renderAll();
+}
+
+function renderList(){
+  const q=document.getElementById("searchInput").value.trim().toLowerCase();
+  const levels=sortedLevels().filter(l=>l.name.toLowerCase().includes(q)||l.id.toLowerCase().includes(q));
+  const list=document.getElementById("list");
+
+  if(!levels.length){list.innerHTML='<div class="empty">No levels found.</div>';return;}
+
+  list.innerHTML=levels.map((l,i)=>{
+    const realRank=rankOf(l.id);
+    const confidence=(l.comparisons||0)<3?"New":(l.comparisons<10?"Low":(l.comparisons<25?"Medium":"High"));
+    return `<div class="row">
+      <div class="pos">#${realRank}</div>
+      <div>
+        <div class="name">${escapeHTML(l.name)}</div>
+        <div class="meta">ID ${escapeHTML(l.id)}${l.baselineRank?` • Owner baseline #${l.baselineRank}`:""} • ${confidence} confidence</div>
+      </div>
+      <div class="rating">${Math.round(l.rating)}</div>
+      <div class="comp">${l.comparisons||0} votes</div>
+      <button class="danger remove" onclick="removeLevel('${jsEscape(l.id)}')">Remove</button>
+    </div>`;
+  }).join("");
+}
+
+function removeLevel(id){
+  const l=state.levels.find(x=>x.id===id);
+  if(!l) return;
+  state.levels=state.levels.filter(x=>x.id!==id);
+  state.history=state.history.filter(k=>!k.split("|").includes(id));
+  save();
+  renderAll();
+}
+
+function applyBaseline(){
+  const lines=document.getElementById("baselineInput").value
+    .split(/[\n,]+/).map(x=>x.trim()).filter(Boolean);
+  const status=document.getElementById("baselineStatus");
+  if(!lines.length){status.textContent="Enter at least one level ID.";return;}
+
+  let found=0;
+  lines.forEach((id,index)=>{
+    const l=state.levels.find(x=>x.id===id);
+    if(l){
+      l.baselineRank=index+1;
+      l.rating=2100-index*40;
+      found++;
+    }
+  });
+  save(); renderAll();
+  status.textContent=`Applied baseline positions to ${found} level${found===1?"":"s"}.`;
+}
+
+function resetDemo(){
+  if(!confirm("Reset The List to the demo levels? This removes your local levels and votes.")) return;
+  state={levels:structuredClone(demo),history:[]};
+  save(); renderAll();
+}
+
+function renderAll(){
+  renderCompare();
+  renderList();
+  document.getElementById("stats").innerHTML=
+    `${state.levels.length} levels • ${state.history.length} pairwise comparisons`;
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function jsEscape(s){
+  return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+}
+
+renderAll();
+</script>
+</body>
+</html>

@@ -11,8 +11,8 @@ header{background:linear-gradient(135deg,#202633,#151922);border-bottom:2px soli
 h1{margin:0;font-size:42px;letter-spacing:2px}header p{margin:8px 0 0;color:#aeb7c9}
 main{max-width:1100px;margin:0 auto;padding:22px}.panel{background:#191d26;border:1px solid #303747;border-radius:14px;padding:20px;margin-bottom:20px;box-shadow:0 8px 25px #0004}
 h2{margin:0 0 14px}.muted{color:#9da7ba}.controls{display:flex;gap:10px;flex-wrap:wrap}
-input,button,textarea{font:inherit;border-radius:9px;border:1px solid #394153}input,textarea{background:#0f1218;color:#fff;padding:11px 12px;outline:none}input{flex:1;min-width:180px}textarea{width:100%;min-height:130px;resize:vertical}
-button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weight:bold}button:hover{filter:brightness(1.15)}.primary{background:#5968ff;border-color:#6977ff}.danger{background:#642d38}
+input,button,textarea{font:inherit;border-radius:9px;border:1px solid #394153}input,textarea{background:#0f1218;color:#fff;padding:11px 12px;outline:none}input{flex:1;min-width:180px}textarea{width:100%;min-height:180px;resize:vertical}
+button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weight:bold}button:hover{filter:brightness(1.15)}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:#5968ff;border-color:#6977ff}.danger{background:#642d38}
 .compare{display:grid;grid-template-columns:1fr 70px 1fr;gap:14px;align-items:stretch}.level-card{background:#11151d;border:2px solid #343c4f;border-radius:14px;padding:22px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;min-height:250px}
 .level-card h3{font-size:25px;margin:4px 0 8px}.id{color:#8994aa;font-size:13px}.rank{font-size:18px;margin:12px 0}.vs{display:flex;align-items:center;justify-content:center;font-size:24px;color:#707b91}
 .vote{width:100%;font-size:18px;padding:15px 10px;background:#3f4fe2;border-color:#5564ff}.hint{text-align:center;color:#aeb7c9;margin:13px 0 0}
@@ -20,7 +20,8 @@ button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weigh
 .pos{font-size:20px;font-weight:bold;color:#8d98ae;text-align:center}.name{font-weight:bold}.meta{font-size:12px;color:#808ba0;margin-top:3px}.rating{text-align:right;font-weight:bold}.comp{text-align:right;color:#9da7ba;font-size:13px}
 .row button{padding:7px 10px;font-size:12px}.empty{text-align:center;padding:25px;color:#8994aa}.stats{display:flex;gap:20px;flex-wrap:wrap;color:#adb6c8;font-size:14px}.admin{border-color:#574b2c}.baseline-help{font-size:13px;color:#9da7ba;line-height:1.5}.status{min-height:20px;margin-top:10px;color:#aeb7c9}
 .connection{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-size:13px;color:#aeb7c9}.dot{width:9px;height:9px;border-radius:50%;background:#777}.dot.online{background:#61d48a}
-@media(max-width:720px){.compare{grid-template-columns:1fr}.vs{height:20px}.row{grid-template-columns:45px 1fr 80px}.row .comp,.row .remove{display:none}h1{font-size:32px}}
+.owner-login{display:flex;gap:10px;flex-wrap:wrap}.owner-login input{min-width:220px}.owner-badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#2b3242;color:#cfd6e5;font-size:12px;margin-bottom:12px}.baseline-count{margin-top:10px;color:#aeb7c9;font-size:13px}
+@media(max-width:720px){.compare{grid-template-columns:1fr}.vs{height:20px}.row{grid-template-columns:45px 1fr 80px}.row .comp,.row .remove{display:none}h1{font-size:32px}.owner-login{flex-direction:column}.owner-login input,.owner-login button{width:100%}}
 </style>
 </head>
 <body>
@@ -54,10 +55,28 @@ button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weigh
 
 <section class="panel admin">
 <h2>🛠️ Owner Baseline</h2>
-<p class="baseline-help">Put one level ID per line, from hardest (#1) to easiest. Applying it seeds ratings in that order. For now, manage this from the Supabase dashboard so ordinary visitors cannot overwrite your baseline.</p>
-<textarea id="baselineInput" placeholder="24000000&#10;12345678&#10;87654321"></textarea>
-<div class="controls" style="margin-top:10px"><button onclick="applyBaseline()">Apply Owner Baseline Locally</button></div>
-<div class="status" id="baselineStatus"></div>
+<div id="ownerLoginArea">
+  <p class="baseline-help">Owner controls are locked. Sign in with the owner account to edit the shared baseline.</p>
+  <div class="owner-login">
+    <input id="ownerEmail" type="email" placeholder="Owner email" autocomplete="email">
+    <input id="ownerPassword" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="primary" onclick="ownerLogin()">🔐 Owner Login</button>
+  </div>
+  <div class="status" id="ownerLoginStatus"></div>
+</div>
+
+<div id="ownerEditor" style="display:none">
+  <div class="owner-badge">👑 Owner controls unlocked</div>
+  <p class="baseline-help">Put one level ID per line, from hardest (#1) to easiest. Save it to make this the shared owner baseline. Levels must already be on The List.</p>
+  <textarea id="baselineInput" placeholder="10565740&#10;3976338&#10;4284015"></textarea>
+  <div class="controls" style="margin-top:10px">
+    <button class="primary" onclick="saveBaseline()">💾 Save Shared Baseline</button>
+    <button onclick="loadBaseline()">↻ Reload Baseline</button>
+    <button onclick="ownerLogout()">Log Out</button>
+  </div>
+  <div class="baseline-count" id="baselineCount"></div>
+  <div class="status" id="baselineStatus"></div>
+</div>
 </section>
 </main>
 
@@ -66,7 +85,7 @@ const SUPABASE_URL = "https://ifufmrgoknrqwbtxydmr.supabase.co";
 const SUPABASE_KEY = "sb_publishable_KXTCeSGR9LIpvqr15TOXBw_fIK9X1Rx";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let levels=[], currentPair=null;
+let levels=[], currentPair=null, ownerUser=null;
 
 async function loadLevels(){
   const {data,error}=await db.from("levels").select("*").order("rating",{ascending:false});
@@ -143,22 +162,84 @@ function renderList(){
 }
 
 async function removeLevel(id){
-  // Deliberately disabled in the public UI because deletion should eventually be owner-only.
   alert("Level removal is temporarily disabled on the shared version. We will add owner/admin controls next.");
 }
 
-async function applyBaseline(){
-  const ids=document.getElementById("baselineInput").value.split(/[\n,]+/).map(x=>Number(x.trim())).filter(Number.isSafeInteger);
-  let found=0;
-  for(let i=0;i<ids.length;i++){
-    const id=ids[i];
-    const level=levels.find(x=>x.id===id);
-    if(!level)continue;
-    // This prototype button only changes the local display; secure baseline editing will be owner-only.
-    level.baseline_rank=i+1;level.rating=2100-i*40;found++;
+async function ownerLogin(){
+  const email=document.getElementById("ownerEmail").value.trim();
+  const password=document.getElementById("ownerPassword").value;
+  const status=document.getElementById("ownerLoginStatus");
+  if(!email||!password){status.textContent="Enter your owner email and password.";return}
+  status.textContent="Signing in...";
+  const {data,error}=await db.auth.signInWithPassword({email,password});
+  if(error){status.textContent="Login failed: "+error.message;return}
+  const {data:owner,error:ownerError}=await db.from("owner_users").select("user_id").eq("user_id",data.user.id).maybeSingle();
+  if(ownerError||!owner){
+    await db.auth.signOut();
+    status.textContent="This account is not authorized as the owner.";
+    return;
   }
-  levels=sortedLevels();renderList();renderCompare();
-  document.getElementById("baselineStatus").textContent=`Previewed ${found} baseline position${found===1?"":"s"}. This does not write the owner baseline to the shared database yet.`;
+  ownerUser=data.user;
+  document.getElementById("ownerLoginArea").style.display="none";
+  document.getElementById("ownerEditor").style.display="block";
+  document.getElementById("ownerEmail").value="";
+  document.getElementById("ownerPassword").value="";
+  status.textContent="";
+  await loadBaseline();
+}
+
+async function ownerLogout(){
+  await db.auth.signOut();
+  ownerUser=null;
+  document.getElementById("ownerEditor").style.display="none";
+  document.getElementById("ownerLoginArea").style.display="block";
+  document.getElementById("ownerLoginStatus").textContent="Logged out.";
+}
+
+async function loadBaseline(){
+  const status=document.getElementById("baselineStatus"),count=document.getElementById("baselineCount");
+  status.textContent="Loading shared baseline...";
+  const {data,error}=await db.from("owner_baseline").select("level_id,baseline_rank").order("baseline_rank",{ascending:true});
+  if(error){status.textContent="Could not load baseline: "+error.message;return}
+  document.getElementById("baselineInput").value=(data||[]).map(x=>x.level_id).join("\n");
+  count.textContent=`${(data||[]).length} level${(data||[]).length===1?"":"s"} in the shared baseline.`;
+  status.textContent="Shared baseline loaded.";
+}
+
+async function saveBaseline(){
+  const status=document.getElementById("baselineStatus");
+  const raw=document.getElementById("baselineInput").value.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean);
+  const ids=[];
+  for(const value of raw){
+    const id=Number(value);
+    if(!Number.isSafeInteger(id)||id<1){status.textContent=`Invalid level ID: ${value}`;return}
+    if(ids.includes(id)){status.textContent=`Level ID ${id} appears more than once.`;return}
+    ids.push(id);
+  }
+  const missing=ids.filter(id=>!levels.some(l=>l.id===id));
+  if(missing.length){status.textContent=`These IDs are not on The List: ${missing.join(", ")}`;return}
+  if(!confirm(`Save ${ids.length} level${ids.length===1?"":"s"} as the shared owner baseline?`))return;
+  status.textContent="Saving shared baseline...";
+  const {data,error}=await db.rpc("set_owner_baseline",{p_level_ids:ids});
+  if(error){status.textContent="Could not save baseline: "+error.message;return}
+  status.textContent=`Saved ${data.count} baseline position${data.count===1?"":"s"} to Supabase.`;
+  await refresh();
+  await loadBaseline();
+}
+
+async function restoreOwnerSession(){
+  const {data}=await db.auth.getSession();
+  if(!data.session)return;
+  const user=data.session.user;
+  const {data:owner}=await db.from("owner_users").select("user_id").eq("user_id",user.id).maybeSingle();
+  if(owner){
+    ownerUser=user;
+    document.getElementById("ownerLoginArea").style.display="none";
+    document.getElementById("ownerEditor").style.display="block";
+    await loadBaseline();
+  }else{
+    await db.auth.signOut();
+  }
 }
 
 async function refresh(){
@@ -178,7 +259,17 @@ async function refresh(){
 }
 
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-refresh();
+
+db.auth.onAuthStateChange(async (event,session)=>{
+  if(event==="SIGNED_OUT"){
+    ownerUser=null;
+    document.getElementById("ownerEditor").style.display="none";
+    document.getElementById("ownerLoginArea").style.display="block";
+  }
+});
+
+(async()=>{await refresh();await restoreOwnerSession();})();
 </script>
 </body>
+</html>
 </html>

@@ -21,7 +21,7 @@ function showTab(name){
   document.querySelectorAll(".admin-tab-content").forEach(x=>x.classList.toggle("hidden",x.id!=="tab-"+name));
   if(name==="levels") renderLevels();
   if(name==="completions") loadCompletions();
-  if(name==="baseline") renderBaseline();
+  if(name==="baseline"){refreshLevelsForBaseline().then(ok=>{if(ok)renderBaseline();});}
 }
 
 async function loadLevels(){
@@ -101,6 +101,13 @@ async function loadCompletions(){
   });
 }
 
+async function refreshLevelsForBaseline(){
+  const {data,error}=await db.from("levels").select("*").order("rating",{ascending:false});
+  if(error){$("baseline-message").textContent="Could not refresh levels: "+error.message;return false;}
+  levels=data||[];
+  return true;
+}
+
 function renderBaseline(){
   const el=$("admin-baseline-list");
   if(!el)return;
@@ -114,6 +121,11 @@ function renderBaseline(){
   });
 
   baseline=ordered;
+
+  const newCount=ordered.filter(l=>l.baseline_rank==null).length;
+  const savedCount=ordered.length-newCount;
+  const countEl=$("baseline-message");
+  if(countEl) countEl.textContent=`${ordered.length} total levels • ${savedCount} ranked • ${newCount} new/unranked. New levels are included at the bottom — drag them wherever they belong.`;
 
   el.innerHTML=ordered.map((l,i)=>`
     <div class="admin-row baseline-admin-row" draggable="true" data-id="${l.id}">

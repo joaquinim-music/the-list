@@ -69,12 +69,19 @@ async function ownerLogin(){
   if(error){$("ownerStatus").textContent=error.message;return}
   const check=await db.from("owner_users").select("user_id").eq("user_id",data.user.id).maybeSingle();
   owner=!!check.data; $("ownerStatus").textContent=owner?"Owner access granted.":"That account is not an owner.";
-  $("ownerTools").classList.toggle("hidden",!owner); renderOwnerTools();
+  $("ownerTools").classList.toggle("hidden",!owner);
+  if(owner){const ok=await refreshOwnerLevels();if(ok)renderOwnerTools();}
 }
 async function deleteLevel(id){
   if(!owner||!confirm(`Delete level ${id}? This also removes its related ranking/completion data.`))return;
   const {error}=await db.rpc("delete_level",{p_level_id:id});
   if(error)alert(error.message); else await loadLevels();
+}
+async function refreshOwnerLevels(){
+  const {data,error}=await db.from("levels").select("*").order("rating",{ascending:false});
+  if(error){$("ownerStatus").textContent="Could not refresh levels: "+error.message;return false;}
+  levels=data||[];
+  return true;
 }
 function renderOwnerTools(){
   if(!owner)return;
@@ -89,6 +96,8 @@ function renderOwnerTools(){
 }
 async function saveBaseline(){
   if(!owner)return;
+  await refreshOwnerLevels();
+  renderOwnerTools();
   const ids=[...document.querySelectorAll(".baseline-item")].map(x=>Number(x.dataset.id));
   const {error}=await db.rpc("set_owner_baseline",{p_level_ids:ids});
   $("ownerStatus").textContent=error?error.message:"Baseline saved!";

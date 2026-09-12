@@ -170,3 +170,21 @@ async function refreshOwnerLogin(){
 
 wireOwnerLogin();
 refreshOwnerLogin();
+
+async function ownerIsActive(){
+  const {data:{user}}=await db.auth.getUser();
+  if(!user) return false;
+  const {data,error}=await db.from("owner_users")
+    .select("user_id")
+    .eq("user_id",user.id)
+    .maybeSingle();
+  return !error && !!data;
+}
+
+async function ownerDeleteLevel(id){
+  if(!(await ownerIsActive())) throw new Error("Owner login required");
+  const {error}=await db.rpc("delete_level",{p_level_id:Number(id)});
+  if(error) throw error;
+  await loadLevels();
+}
+

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>The List — Admin</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand"><a href="index.html">THE LIST</a><span>ADMIN</span></div>
+    <nav>
+      <a href="index.html">Rankings</a>
+      <a href="players.html">Players</a>
+      <a href="admin.html" class="active">Admin</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <div class="section-title">
+        <h1>🛠️ Administration</h1>
+        <span class="muted">Owner only</span>
+      </div>
+      <p id="admin-status" class="muted">Checking owner access…</p>
+
+      <div id="admin-login" class="hidden">
+        <div class="form-row">
+          <input id="admin-email" type="email" placeholder="Owner login email (private)">
+          <input id="admin-password" type="password" placeholder="Password">
+          <button id="admin-signin" class="primary">Owner Log In</button>
+        </div>
+        <div id="admin-login-message" class="status"></div>
+      </div>
+    </section>
+
+    <div id="admin-app" class="hidden">
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="dashboard">Dashboard</button>
+        <button class="admin-tab" data-tab="levels">Level Moderation</button>
+        <button class="admin-tab" data-tab="completions">Completion Moderation</button>
+        <button class="admin-tab" data-tab="baseline">Owner Baseline</button>
+      </div>
+
+      <section id="tab-dashboard" class="admin-tab-content">
+        <div class="stat-grid" id="admin-stats"></div>
+        <section class="panel">
+          <h2>Quick Actions</h2>
+          <div class="quick-actions">
+            <button data-go="levels" class="secondary">Manage Levels</button>
+            <button data-go="completions" class="secondary">Review Completions</button>
+            <button data-go="baseline" class="secondary">Edit Baseline</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="tab-levels" class="admin-tab-content hidden">
+        <section class="panel">
+          <div class="section-title"><h2>Level Moderation</h2><span id="level-count" class="muted"></span></div>
+          <input id="level-filter" type="search" placeholder="Search levels by name, creator, or ID">
+          <div id="admin-level-list" class="admin-list"></div>
+        </section>
+      </section>
+
+      <section id="tab-completions" class="admin-tab-content hidden">
+        <section class="panel">
+          <div class="section-title"><h2>Completion Moderation</h2><span id="pending-count" class="muted"></span></div>
+          <div id="admin-completion-list" class="admin-list"></div>
+        </section>
+      </section>
+
+      <section id="tab-baseline" class="admin-tab-content hidden">
+        <section class="panel">
+          <div class="section-title"><h2>Owner Baseline</h2><span class="muted">Drag-free ↑ / ↓ ordering</span></div>
+          <p class="muted">The first level is #1. Saving updates the baseline and seeds its ratings.</p>
+          <div id="admin-baseline-list" class="admin-list"></div>
+          <button id="save-admin-baseline" class="primary">Save Baseline Order</button>
+          <span id="baseline-message" class="status"></span>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

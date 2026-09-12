@@ -10,3 +10,20 @@
 .stat-card span{color:var(--muted,#aaa);font-size:.9rem}
 
 .private-note{font-size:.85rem;color:var(--muted,#aaa);margin-top:6px}
+
+.owner-baseline-list{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.baseline-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border,#333);border-radius:10px}
+.baseline-rank{min-width:38px;font-weight:700}
+.baseline-actions{margin-left:auto;display:flex;gap:6px}
+.danger{border:1px solid #a33;background:transparent;color:inherit}
+
+.admin-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.admin-tab{padding:10px 14px;border:1px solid var(--border,#333);background:transparent;border-radius:10px;color:inherit;cursor:pointer}
+.admin-tab.active{font-weight:700;box-shadow:0 0 0 1px currentColor inset}
+.admin-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.admin-row{display:flex;align-items:center;gap:14px;padding:12px;border:1px solid var(--border,#333);border-radius:10px}
+.admin-main{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.admin-actions{display:flex;gap:6px;flex-wrap:wrap}
+.button-link{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.proof-link{width:max-content}
+.completion-row{align-items:flex-start}

@@ -105,14 +105,45 @@ async function loadHistory(){
 
 function chooseComparison(history){
   if(levels.length<2)return null;
-  const pool=[...levels].sort((a,b)=>(a.comparisons||0)-(b.comparisons||0));
-  const target=pool[Math.floor(Math.random()*Math.min(3,pool.length))];
-  const candidates=levels.filter(x=>x.id!==target.id).sort((a,b)=>{
-    const ah=history.has(pairKey(target.id,a.id)), bh=history.has(pairKey(target.id,b.id));
-    if(ah!==bh)return ah?1:-1;
-    return Math.abs(a.rating-target.rating)-Math.abs(b.rating-target.rating);
+
+  // Pick a target with a strong preference for levels that have
+  // relatively few comparisons, while still giving every level
+  // a chance to be selected.
+  const weighted=levels.map(level=>{
+    const c=level.comparisons||0;
+    const uncertainty=1/Math.sqrt(c+1);
+    const baselineBonus=level.baseline_rank ? 1.15 : 1;
+    return {level,weight:uncertainty*baselineBonus};
   });
-  return [target,candidates[0]];
+
+  const total=weighted.reduce((sum,x)=>sum+x.weight,0);
+  let roll=Math.random()*total;
+  let target=weighted[weighted.length-1].level;
+  for(const item of weighted){
+    roll-=item.weight;
+    if(roll<=0){target=item.level;break;}
+  }
+
+  // Prefer opponents close in rating, but give under-tested levels
+  // a boost and strongly discourage repeating the same matchup.
+  const opponents=levels.filter(x=>x.id!==target.id).map(level=>{
+    const distance=Math.abs(level.rating-target.rating);
+    const repeated=history.has(pairKey(target.id,level.id));
+    const targetVotes=target.comparisons||0;
+    const opponentVotes=level.comparisons||0;
+
+    const distanceScore=1/(1+distance/110);
+    const lowVoteBonus=1+180/Math.sqrt((targetVotes+1)*(opponentVotes+1));
+    const repeatMultiplier=repeated?0.12:1;
+
+    return {
+      level,
+      score:distanceScore*lowVoteBonus*repeatMultiplier,
+      distance
+    };
+  }).sort((a,b)=>b.score-a.score || a.distance-b.distance);
+
+  return [target,opponents[0].level];
 }
 
 function cardHTML(l){

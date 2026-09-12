@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The List — Geometry Dash Difficulty Ranking</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#101217;color:#f4f6fb}
+header{background:linear-gradient(135deg,#202633,#151922);border-bottom:2px solid #343b4b;padding:28px 20px;text-align:center}
+h1{margin:0;font-size:42px;letter-spacing:2px}header p{margin:8px 0 0;color:#aeb7c9}
+main{max-width:1100px;margin:0 auto;padding:22px}.panel{background:#191d26;border:1px solid #303747;border-radius:14px;padding:20px;margin-bottom:20px;box-shadow:0 8px 25px #0004}
+h2{margin:0 0 14px}.muted{color:#9da7ba}.controls{display:flex;gap:10px;flex-wrap:wrap}
+input,button,textarea{font:inherit;border-radius:9px;border:1px solid #394153}input,textarea{background:#0f1218;color:#fff;padding:11px 12px;outline:none}input{flex:1;min-width:180px}textarea{width:100%;min-height:130px;resize:vertical}
+button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weight:bold}button:hover{filter:brightness(1.15)}.primary{background:#5968ff;border-color:#6977ff}.danger{background:#642d38}
+.compare{display:grid;grid-template-columns:1fr 70px 1fr;gap:14px;align-items:stretch}.level-card{background:#11151d;border:2px solid #343c4f;border-radius:14px;padding:22px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;min-height:250px}
+.level-card h3{font-size:25px;margin:4px 0 8px}.id{color:#8994aa;font-size:13px}.rank{font-size:18px;margin:12px 0}.vs{display:flex;align-items:center;justify-content:center;font-size:24px;color:#707b91}
+.vote{width:100%;font-size:18px;padding:15px 10px;background:#3f4fe2;border-color:#5564ff}.hint{text-align:center;color:#aeb7c9;margin:13px 0 0}
+.list{display:flex;flex-direction:column;gap:9px}.row{display:grid;grid-template-columns:55px 1fr 90px 120px 90px;gap:12px;align-items:center;background:#11151d;border:1px solid #2e3545;border-radius:10px;padding:12px 14px}
+.pos{font-size:20px;font-weight:bold;color:#8d98ae;text-align:center}.name{font-weight:bold}.meta{font-size:12px;color:#808ba0;margin-top:3px}.rating{text-align:right;font-weight:bold}.comp{text-align:right;color:#9da7ba;font-size:13px}
+.row button{padding:7px 10px;font-size:12px}.empty{text-align:center;padding:25px;color:#8994aa}.stats{display:flex;gap:20px;flex-wrap:wrap;color:#adb6c8;font-size:14px}.admin{border-color:#574b2c}.baseline-help{font-size:13px;color:#9da7ba;line-height:1.5}.status{min-height:20px;margin-top:10px;color:#aeb7c9}
+.connection{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-size:13px;color:#aeb7c9}.dot{width:9px;height:9px;border-radius:50%;background:#777}.dot.online{background:#61d48a}
+@media(max-width:720px){.compare{grid-template-columns:1fr}.vs{height:20px}.row{grid-template-columns:45px 1fr 80px}.row .comp,.row .remove{display:none}h1{font-size:32px}}
+</style>
+</head>
+<body>
+<header>
+<h1>THE LIST</h1><p>One list. Every level. Ranked by the community.</p>
+<div class="connection"><span id="connectionDot" class="dot"></span><span id="connectionText">Connecting to The List...</span></div>
+</header>
+<main>
+<section class="panel">
+<h2>⚔️ Compare Levels</h2>
+<p class="muted">Pick the level you think is harder. Comparisons are matched against nearby levels so each vote gives the ranking useful information.</p>
+<div id="compareArea"></div><div class="hint" id="compareHint"></div>
+</section>
+
+<section class="panel">
+<h2>➕ Add a Level</h2>
+<div class="controls"><input id="nameInput" placeholder="Level name"><input id="idInput" placeholder="Geometry Dash ID" inputmode="numeric"><button class="primary" onclick="addLevel()">Add Level</button></div>
+<div class="status" id="addStatus"></div>
+</section>
+
+<section class="panel">
+<h2>🔎 Search</h2><input id="searchInput" placeholder="Search by level name or ID..." oninput="renderList()">
+</section>
+
+<section class="panel">
+<div style="display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap">
+<div><h2 style="margin-bottom:4px">🏆 The List</h2><div class="stats" id="stats"></div></div>
+</div>
+<div style="height:14px"></div><div class="list" id="list"></div>
+</section>
+
+<section class="panel admin">
+<h2>🛠️ Owner Baseline</h2>
+<p class="baseline-help">Put one level ID per line, from hardest (#1) to easiest. Applying it seeds ratings in that order. For now, manage this from the Supabase dashboard so ordinary visitors cannot overwrite your baseline.</p>
+<textarea id="baselineInput" placeholder="24000000&#10;12345678&#10;87654321"></textarea>
+<div class="controls" style="margin-top:10px"><button onclick="applyBaseline()">Apply Owner Baseline Locally</button></div>
+<div class="status" id="baselineStatus"></div>
+</section>
+</main>
+
+<script>
+const SUPABASE_URL = "https://ifufmrgoknrqwbtxydmr.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KXTCeSGR9LIpvqr15TOXBw_fIK9X1Rx";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let levels=[], currentPair=null;
+
+async function loadLevels(){
+  const {data,error}=await db.from("levels").select("*").order("rating",{ascending:false});
+  if(error) throw error;
+  levels=data||[];
+}
+
+function sortedLevels(){return [...levels].sort((a,b)=>b.rating-a.rating)}
+function rankOf(id){return sortedLevels().findIndex(x=>x.id===id)+1}
+function pairKey(a,b){return [String(a),String(b)].sort().join("|")}
+
+async function loadHistory(){
+  const {data,error}=await db.from("comparisons").select("level_a,level_b").order("created_at",{ascending:false}).limit(500);
+  if(error) throw error;
+  return new Set((data||[]).map(x=>pairKey(x.level_a,x.level_b)));
+}
+
+function chooseComparison(history){
+  if(levels.length<2)return null;
+  const pool=[...levels].sort((a,b)=>(a.comparisons||0)-(b.comparisons||0));
+  const target=pool[Math.floor(Math.random()*Math.min(3,pool.length))];
+  const candidates=levels.filter(x=>x.id!==target.id).sort((a,b)=>{
+    const ah=history.has(pairKey(target.id,a.id)), bh=history.has(pairKey(target.id,b.id));
+    if(ah!==bh)return ah?1:-1;
+    return Math.abs(a.rating-target.rating)-Math.abs(b.rating-target.rating);
+  });
+  return [target,candidates[0]];
+}
+
+function cardHTML(l){
+  return `<div class="level-card"><div><div class="id">ID ${escapeHTML(l.id)}</div><h3>${escapeHTML(l.name)}</h3><div class="rank">Current rank: <b>#${rankOf(l.id)}</b></div><div class="id">${l.comparisons||0} comparison${(l.comparisons||0)==1?"":"s"}</div></div><button class="vote" onclick="vote(${Number(l.id)})">⬆ This is harder</button></div>`;
+}
+
+async function renderCompare(){
+  const area=document.getElementById("compareArea"),hint=document.getElementById("compareHint");
+  if(levels.length<2){area.innerHTML='<div class="empty">Add at least two levels to start comparing.</div>';hint.textContent="";return}
+  try{const history=await loadHistory();currentPair=chooseComparison(history)}catch(e){currentPair=chooseComparison(new Set())}
+  const [a,b]=currentPair;
+  hint.textContent=`These are currently around #${rankOf(a.id)} and #${rankOf(b.id)}.`;
+  area.innerHTML=`<div class="compare">${cardHTML(a)}<div class="vs">VS</div>${cardHTML(b)}</div>`;
+}
+
+async function vote(winnerId){
+  if(!currentPair)return;
+  const [a,b]=currentPair;
+  if(winnerId!==a.id&&winnerId!==b.id)return;
+  document.querySelectorAll(".vote").forEach(x=>x.disabled=true);
+  const {error}=await db.rpc("submit_comparison",{p_level_a:a.id,p_level_b:b.id,p_winner:winnerId});
+  if(error){alert("Vote failed: "+error.message);await renderCompare();return}
+  await refresh();
+}
+
+async function addLevel(){
+  const name=document.getElementById("nameInput").value.trim(),idText=document.getElementById("idInput").value.trim(),status=document.getElementById("addStatus");
+  const id=Number(idText);
+  if(!name||!idText||!Number.isSafeInteger(id)||id<1){status.textContent="Please enter a valid name and numeric ID.";return}
+  if(levels.some(l=>l.id===id)){status.textContent="That level ID is already on The List.";return}
+  const {error}=await db.from("levels").insert({id,name,rating:1500,comparisons:0,baseline_rank:null});
+  if(error){status.textContent="Could not add level: "+error.message;return}
+  document.getElementById("nameInput").value="";document.getElementById("idInput").value="";
+  status.textContent=`Added "${name}" at the starting rating.`;
+  await refresh();
+}
+
+function renderList(){
+  const q=document.getElementById("searchInput").value.trim().toLowerCase();
+  const shown=sortedLevels().filter(l=>l.name.toLowerCase().includes(q)||String(l.id).includes(q));
+  const list=document.getElementById("list");
+  if(!shown.length){list.innerHTML='<div class="empty">No levels found.</div>';return}
+  list.innerHTML=shown.map(l=>{
+    const r=rankOf(l.id),c=l.comparisons||0,confidence=c<3?"New":c<10?"Low":c<25?"Medium":"High";
+    return `<div class="row"><div class="pos">#${r}</div><div><div class="name">${escapeHTML(l.name)}</div><div class="meta">ID ${escapeHTML(l.id)}${l.baseline_rank?` • Owner baseline #${l.baseline_rank}`:""} • ${confidence} confidence</div></div><div class="rating">${Math.round(l.rating)}</div><div class="comp">${c} votes</div><button class="danger remove" onclick="removeLevel(${Number(l.id)})">Remove</button></div>`;
+  }).join("");
+}
+
+async function removeLevel(id){
+  // Deliberately disabled in the public UI because deletion should eventually be owner-only.
+  alert("Level removal is temporarily disabled on the shared version. We will add owner/admin controls next.");
+}
+
+async function applyBaseline(){
+  const ids=document.getElementById("baselineInput").value.split(/[\n,]+/).map(x=>Number(x.trim())).filter(Number.isSafeInteger);
+  let found=0;
+  for(let i=0;i<ids.length;i++){
+    const id=ids[i];
+    const level=levels.find(x=>x.id===id);
+    if(!level)continue;
+    // This prototype button only changes the local display; secure baseline editing will be owner-only.
+    level.baseline_rank=i+1;level.rating=2100-i*40;found++;
+  }
+  levels=sortedLevels();renderList();renderCompare();
+  document.getElementById("baselineStatus").textContent=`Previewed ${found} baseline position${found===1?"":"s"}. This does not write the owner baseline to the shared database yet.`;
+}
+
+async function refresh(){
+  try{
+    await loadLevels();
+    document.getElementById("connectionDot").classList.add("online");
+    document.getElementById("connectionText").textContent="Connected to the shared ranking";
+    document.getElementById("stats").innerHTML=`${levels.length} levels • Shared community rankings`;
+    renderList();await renderCompare();
+  }catch(e){
+    document.getElementById("connectionDot").classList.remove("online");
+    document.getElementById("connectionText").textContent="Database connection failed";
+    document.getElementById("stats").textContent="Could not load the shared ranking.";
+    document.getElementById("list").innerHTML='<div class="empty">Could not connect to Supabase. Check your project settings and SQL setup.</div>';
+    console.error(e);
+  }
+}
+
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+refresh();
+</script>
+</body>
+</html>

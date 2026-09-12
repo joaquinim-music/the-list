@@ -1,405 +1,150 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The List — Geometry Dash Difficulty Ranking</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#101217;color:#f4f6fb}
-header{background:linear-gradient(135deg,#202633,#151922);border-bottom:2px solid #343b4b;padding:28px 20px;text-align:center}
-h1{margin:0;font-size:42px;letter-spacing:2px}header p{margin:8px 0 0;color:#aeb7c9}
-main{max-width:1100px;margin:0 auto;padding:22px}.panel{background:#191d26;border:1px solid #303747;border-radius:14px;padding:20px;margin-bottom:20px;box-shadow:0 8px 25px #0004}
-h2{margin:0 0 14px}.muted{color:#9da7ba}.controls{display:flex;gap:10px;flex-wrap:wrap}
-input,button,textarea{font:inherit;border-radius:9px;border:1px solid #394153}input,textarea{background:#0f1218;color:#fff;padding:11px 12px;outline:none}input{flex:1;min-width:180px}textarea{width:100%;min-height:180px;resize:vertical}
-button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weight:bold}button:hover{filter:brightness(1.15)}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:#5968ff;border-color:#6977ff}.danger{background:#642d38}
-.compare{display:grid;grid-template-columns:1fr 70px 1fr;gap:14px;align-items:stretch}.level-card{background:#11151d;border:2px solid #343c4f;border-radius:14px;padding:22px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;min-height:250px}
-.level-card h3{font-size:25px;margin:4px 0 8px}.id{color:#8994aa;font-size:13px}.rank{font-size:18px;margin:12px 0}.vs{display:flex;align-items:center;justify-content:center;font-size:24px;color:#707b91}
-.vote{width:100%;font-size:18px;padding:15px 10px;background:#3f4fe2;border-color:#5564ff}.hint{text-align:center;color:#aeb7c9;margin:13px 0 0}
-.list{display:flex;flex-direction:column;gap:9px}.row{display:grid;grid-template-columns:55px 1fr 90px 120px 90px;gap:12px;align-items:center;background:#11151d;border:1px solid #2e3545;border-radius:10px;padding:12px 14px}
-.pos{font-size:20px;font-weight:bold;color:#8d98ae;text-align:center}.name{font-weight:bold}.meta{font-size:12px;color:#808ba0;margin-top:3px}.rating{text-align:right;font-weight:bold}.comp{text-align:right;color:#9da7ba;font-size:13px}
-.row button{padding:7px 10px;font-size:12px}.empty{text-align:center;padding:25px;color:#8994aa}.stats{display:flex;gap:20px;flex-wrap:wrap;color:#adb6c8;font-size:14px}.admin{border-color:#574b2c}.baseline-help{font-size:13px;color:#9da7ba;line-height:1.5}.status{min-height:20px;margin-top:10px;color:#aeb7c9}
-.connection{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-size:13px;color:#aeb7c9}.dot{width:9px;height:9px;border-radius:50%;background:#777}.dot.online{background:#61d48a}
-.owner-login{display:flex;gap:10px;flex-wrap:wrap}.owner-login input{min-width:220px}.owner-badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#2b3242;color:#cfd6e5;font-size:12px;margin-bottom:12px}.baseline-count{margin-top:10px;color:#aeb7c9;font-size:13px}.baseline-list{display:flex;flex-direction:column;gap:8px;margin:14px 0;max-height:520px;overflow:auto;padding-right:4px}.baseline-item{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;background:#11151d;border:1px solid #303747;border-radius:10px;padding:10px 12px;cursor:grab;user-select:none}.baseline-item:active{cursor:grabbing}.baseline-item.dragging{opacity:.45}.drag-handle{font-size:20px;color:#7f8aa0;text-align:center}.baseline-item .name{font-weight:bold}.baseline-item .meta{font-size:12px;color:#808ba0;margin-top:3px}.baseline-position{font-weight:bold;color:#aeb7c9;min-width:38px;text-align:right}.baseline-empty{padding:18px;text-align:center;color:#8994aa;border:1px dashed #343c4f;border-radius:10px}
-@media(max-width:720px){.compare{grid-template-columns:1fr}.vs{height:20px}.row{grid-template-columns:45px 1fr 80px}.row .comp,.row .remove{display:none}h1{font-size:32px}.owner-login{flex-direction:column}.owner-login input,.owner-login button{width:100%}}
-.players-panel{border-color:#394a68}.player-auth{display:flex;gap:10px;flex-wrap:wrap}.player-auth input{min-width:190px}.player-profile{background:#11151d;border:1px solid #303747;border-radius:12px;padding:15px;margin-top:14px}.completion-list{display:flex;flex-direction:column;gap:7px;margin-top:12px}.completion-row{display:flex;justify-content:space-between;gap:10px;align-items:center;background:#11151d;border:1px solid #303747;border-radius:9px;padding:10px}.player-table{width:100%;border-collapse:collapse;margin-top:12px}.player-table th,.player-table td{text-align:left;padding:10px;border-bottom:1px solid #303747}.player-table th{color:#9da7ba;font-size:12px}.small-btn{padding:7px 10px;font-size:12px}.player-search{margin-top:12px}.completion-status{font-size:12px;color:#9da7ba;margin-top:8px}@media(max-width:720px){.player-table{font-size:13px}.player-table th:nth-child(3),.player-table td:nth-child(3){display:none}.completion-row{flex-direction:column;align-items:flex-start}.player-auth input,.player-auth button{width:100%}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>The List — Geometry Dash Rankings</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<header>
-<h1>THE LIST</h1><p>One list. Every level. Ranked by the community.</p>
-<div class="connection"><span id="connectionDot" class="dot"></span><span id="connectionText">Connecting to The List...</span></div>
+<header class="site-header">
+  <div>
+    <h1>THE LIST</h1>
+    <p>One list. Every level. Ranked by the community.</p>
+  </div>
+  <div class="connection"><span id="connectionDot" class="dot"></span><span id="connectionText">Connecting...</span></div>
 </header>
+
 <main>
-<section class="panel">
-<h2>⚔️ Compare Levels</h2>
-<p class="muted">Pick the level you think is harder. Comparisons are matched against nearby levels so each vote gives the ranking useful information.</p>
-<div id="compareArea"></div><div class="hint" id="compareHint"></div>
-</section>
-
-<section class="panel">
-<h2>➕ Add a Level</h2>
-<div class="controls"><input id="nameInput" placeholder="Level name"><input id="idInput" placeholder="Geometry Dash ID" inputmode="numeric"><button class="primary" onclick="addLevel()">Add Level</button></div>
-<div class="status" id="addStatus"></div>
-</section>
-
-<section class="panel">
-<h2>🔎 Search</h2><input id="searchInput" placeholder="Search by level name or ID..." oninput="renderList()">
-</section>
-
-<section class="panel">
-<div style="display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap">
-<div><h2 style="margin-bottom:4px">🏆 The List</h2><div class="stats" id="stats"></div></div>
-</div>
-<div style="height:14px"></div><div class="list" id="list"></div>
-</section>
-
-<section class="panel players-panel">
-<h2>🏆 Player Stats & Completions</h2>
-<p class="muted">Create a username, record the levels you've beaten, and see who has completed each level. Completions are currently self-reported.</p>
-<div id="playerAuthArea">
-  <div class="player-auth">
-    <input id="playerEmail" type="email" placeholder="Email" autocomplete="email">
-    <input id="playerPassword" type="password" placeholder="Password" autocomplete="current-password">
-    <button class="primary" onclick="playerSignUp()">Create Account</button>
-    <button onclick="playerSignIn()">Log In</button>
-  </div>
-  <div class="status" id="playerAuthStatus"></div>
-</div>
-<div id="playerArea" style="display:none">
-  <div class="player-profile">
-    <div><span class="owner-badge">👤 Player</span></div>
-    <div class="controls">
-      <input id="usernameInput" placeholder="Choose a username">
-      <button class="primary" onclick="saveUsername()">Save Username</button>
-      <button onclick="playerLogout()">Log Out</button>
+  <section class="panel">
+    <div class="section-title"><div><h2>⚔️ Compare Levels</h2>
+      <p class="muted">Choose which level is harder. Matchups stay close so votes improve the ranking.</p></div>
+      <button id="nextMatchBtn">New matchup</button>
     </div>
-    <div class="status" id="playerStatus"></div>
-    <div id="playerStats" class="stats"></div>
-    <div class="completion-list" id="myCompletions"></div>
-  </div>
-</div>
-<div class="player-search">
-  <input id="completionSearch" placeholder="Search a level to see who beat it..." oninput="renderCompletionSearch()">
-  <div id="completionSearchResults"></div>
-</div>
-</section>
+    <div id="compareArea"></div>
+    <div class="hint" id="compareHint"></div>
+  </section>
 
-<section class="panel admin">
-<h2>🛠️ Owner Baseline</h2>
-<div id="ownerLoginArea">
-  <p class="baseline-help">Owner controls are locked. Sign in with the owner account to edit the shared baseline.</p>
-  <div class="owner-login">
-    <input id="ownerEmail" type="email" placeholder="Owner email" autocomplete="email">
-    <input id="ownerPassword" type="password" placeholder="Password" autocomplete="current-password">
-    <button class="primary" onclick="ownerLogin()">🔐 Owner Login</button>
-  </div>
-  <div class="status" id="ownerLoginStatus"></div>
-</div>
+  <section class="panel">
+    <h2>➕ Add a Level</h2>
+    <p class="muted">Anyone can add a verified level. New levels start unranked until the community compares them.</p>
+    <div class="controls">
+      <input id="nameInput" placeholder="Level name">
+      <input id="idInput" placeholder="Geometry Dash ID" inputmode="numeric">
+      <button class="primary" id="addLevelBtn">Add Level</button>
+    </div>
+    <div class="status" id="addStatus"></div>
+  </section>
 
-<div id="ownerEditor" style="display:none">
-  <div class="owner-badge">👑 Owner controls unlocked</div>
-  <p class="baseline-help">All levels on The List are loaded automatically. Drag and drop them from hardest (#1) to easiest. New levels appear at the bottom until you place them.</p>
-  <div id="baselineList" class="baseline-list"></div>
-  <div class="controls" style="margin-top:10px">
-    <button class="primary" onclick="saveBaseline()">💾 Save Shared Baseline</button>
-    <button onclick="loadBaseline()">↻ Reload Baseline</button>
-    <button onclick="ownerLogout()">Log Out</button>
-  </div>
-  <div class="baseline-count" id="baselineCount"></div>
-  <div class="status" id="baselineStatus"></div>
-</div>
-</section>
+  <section class="panel">
+    <div class="section-title">
+      <div><h2>🔎 Search</h2><p class="muted">Find a level by name or ID.</p></div>
+      <select id="sortSelect">
+        <option value="rank">Rank</option>
+        <option value="rating">Rating</option>
+        <option value="newest">Newest</option>
+        <option value="comparisons">Most compared</option>
+      </select>
+    </div>
+    <input id="searchInput" placeholder="Search by level name or ID...">
+  </section>
+
+  <section class="panel">
+    <div class="section-title">
+      <div><h2>🏆 The List</h2><div class="stats" id="stats"></div></div>
+    </div>
+    <div id="list" class="list"></div>
+  </section>
+
+  <section class="panel">
+    <div class="section-title">
+      <div><h2>👥 Player Leaderboard</h2>
+      <p class="muted">Players are ranked by the difficulty of the levels they've recorded beating.</p></div>
+      <select id="leaderboardSort">
+        <option value="score">Difficulty Score</option>
+        <option value="count">Levels Beaten</option>
+      </select>
+    </div>
+    <div id="leaderboard" class="leaderboard"></div>
+  </section>
+
+  <section class="panel">
+    <h2>👤 Player Account</h2>
+    <p class="muted">Create a username, record your completions, and view your stats. Completions are self-reported for now.</p>
+
+    <div id="playerAuthArea">
+      <div class="controls">
+        <input id="playerEmail" type="email" placeholder="Email" autocomplete="email">
+        <input id="playerPassword" type="password" placeholder="Password" autocomplete="current-password">
+        <button class="primary" id="signupBtn">Create Account</button>
+        <button id="loginBtn">Log In</button>
+      </div>
+      <div class="status" id="playerAuthStatus"></div>
+    </div>
+
+    <div id="playerArea" hidden>
+      <div class="player-card">
+        <div class="section-title">
+          <div>
+            <span class="badge">PLAYER</span>
+            <h3 id="playerNameDisplay">Player</h3>
+          </div>
+          <button id="logoutBtn">Log Out</button>
+        </div>
+
+        <div class="stat-grid" id="playerStats"></div>
+
+        <div class="controls">
+          <input id="usernameInput" placeholder="Choose a username" maxlength="24">
+          <button class="primary" id="saveUsernameBtn">Save Username</button>
+        </div>
+        <div class="status" id="playerStatus"></div>
+
+        <h3>My completions</h3>
+        <div id="myCompletions" class="completion-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>🎯 Completion Finder</h2>
+    <p class="muted">Search for a level to see which players have recorded beating it.</p>
+    <input id="completionSearch" placeholder="Search level...">
+    <div id="completionSearchResults" class="completion-search-results"></div>
+  </section>
+
+  <section class="panel owner-panel">
+    <h2>🔐 Owner Baseline</h2>
+    <p class="muted">Private owner controls. Log in to edit the shared starting order.</p>
+
+    <div id="ownerLoginArea">
+      <div class="controls">
+        <input id="ownerEmail" type="email" placeholder="Owner email" autocomplete="email">
+        <input id="ownerPassword" type="password" placeholder="Owner password" autocomplete="current-password">
+        <button class="primary" id="ownerLoginBtn">Owner Log In</button>
+      </div>
+      <div class="status" id="ownerLoginStatus"></div>
+    </div>
+
+    <div id="ownerEditor" hidden>
+      <div class="section-title">
+        <div><h3>Baseline order</h3><div class="muted" id="baselineCount"></div></div>
+        <div class="controls compact">
+          <button class="primary" id="saveBaselineBtn">Save Baseline</button>
+          <button id="ownerLogoutBtn">Log Out</button>
+        </div>
+      </div>
+      <div id="baselineList" class="baseline-list"></div>
+      <div class="status" id="baselineStatus"></div>
+    </div>
+  </section>
 </main>
 
-<script>
-const SUPABASE_URL = "https://ifufmrgoknrqwbtxydmr.supabase.co";
-const SUPABASE_KEY = "sb_publishable_KXTCeSGR9LIpvqr15TOXBw_fIK9X1Rx";
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<footer>
+  <span>The List</span> • Community rankings • Player stats • Built for Geometry Dash
+</footer>
 
-let levels=[], currentPair=null, ownerUser=null, playerUser=null, playerProfile=null, allCompletions=[];
-
-async function loadLevels(){
-  const {data,error}=await db.from("levels").select("*").order("rating",{ascending:false});
-  if(error) throw error;
-  levels=data||[];
-}
-
-function sortedLevels(){return [...levels].sort((a,b)=>b.rating-a.rating)}
-function rankOf(id){return sortedLevels().findIndex(x=>x.id===id)+1}
-function pairKey(a,b){return [String(a),String(b)].sort().join("|")}
-
-async function loadHistory(){
-  const {data,error}=await db.from("comparisons").select("level_a,level_b").order("created_at",{ascending:false}).limit(500);
-  if(error) throw error;
-  return new Set((data||[]).map(x=>pairKey(x.level_a,x.level_b)));
-}
-
-function chooseComparison(history){
-  if(levels.length<2)return null;
-  const pool=[...levels].sort((a,b)=>(a.comparisons||0)-(b.comparisons||0));
-  const target=pool[Math.floor(Math.random()*Math.min(3,pool.length))];
-  const candidates=levels.filter(x=>x.id!==target.id).sort((a,b)=>{
-    const ah=history.has(pairKey(target.id,a.id)), bh=history.has(pairKey(target.id,b.id));
-    if(ah!==bh)return ah?1:-1;
-    return Math.abs(a.rating-target.rating)-Math.abs(b.rating-target.rating);
-  });
-  return [target,candidates[0]];
-}
-
-function cardHTML(l){
-  return `<div class="level-card"><div><div class="id">ID ${escapeHTML(l.id)}</div><h3>${escapeHTML(l.name)}</h3><div class="rank">Current rank: <b>#${rankOf(l.id)}</b></div><div class="id">${l.comparisons||0} comparison${(l.comparisons||0)==1?"":"s"}</div></div><button class="vote" onclick="vote(${Number(l.id)})">⬆ This is harder</button></div>`;
-}
-
-async function renderCompare(){
-  const area=document.getElementById("compareArea"),hint=document.getElementById("compareHint");
-  if(levels.length<2){area.innerHTML='<div class="empty">Add at least two levels to start comparing.</div>';hint.textContent="";return}
-  try{const history=await loadHistory();currentPair=chooseComparison(history)}catch(e){currentPair=chooseComparison(new Set())}
-  const [a,b]=currentPair;
-  hint.textContent=`These are currently around #${rankOf(a.id)} and #${rankOf(b.id)}.`;
-  area.innerHTML=`<div class="compare">${cardHTML(a)}<div class="vs">VS</div>${cardHTML(b)}</div>`;
-}
-
-async function vote(winnerId){
-  if(!currentPair)return;
-  const [a,b]=currentPair;
-  if(winnerId!==a.id&&winnerId!==b.id)return;
-  document.querySelectorAll(".vote").forEach(x=>x.disabled=true);
-  const {error}=await db.rpc("submit_comparison",{p_level_a:a.id,p_level_b:b.id,p_winner:winnerId});
-  if(error){alert("Vote failed: "+error.message);await renderCompare();return}
-  await refresh();
-}
-
-async function addLevel(){
-  const name=document.getElementById("nameInput").value.trim(),idText=document.getElementById("idInput").value.trim(),status=document.getElementById("addStatus");
-  const id=Number(idText);
-  if(!name||!idText||!Number.isSafeInteger(id)||id<1){status.textContent="Please enter a valid name and numeric ID.";return}
-  if(levels.some(l=>l.id===id)){status.textContent="That level ID is already on The List.";return}
-  const {error}=await db.from("levels").insert({id,name,rating:1500,comparisons:0,baseline_rank:null});
-  if(error){status.textContent="Could not add level: "+error.message;return}
-  document.getElementById("nameInput").value="";document.getElementById("idInput").value="";
-  status.textContent=`Added "${name}" at the starting rating.`;
-  await refresh();
-}
-
-function renderList(){
-  const q=document.getElementById("searchInput").value.trim().toLowerCase();
-  const shown=sortedLevels().filter(l=>l.name.toLowerCase().includes(q)||String(l.id).includes(q));
-  const list=document.getElementById("list");
-  if(!shown.length){list.innerHTML='<div class="empty">No levels found.</div>';return}
-  list.innerHTML=shown.map(l=>{
-    const r=rankOf(l.id),c=l.comparisons||0,confidence=c<3?"New":c<10?"Low":c<25?"Medium":"High";
-    return `<div class="row"><div class="pos">#${r}</div><div><div class="name">${escapeHTML(l.name)}</div><div class="meta">ID ${escapeHTML(l.id)}${l.baseline_rank?` • Owner baseline #${l.baseline_rank}`:""} • ${confidence} confidence</div></div><div class="rating">${Math.round(l.rating)}</div><div class="comp">${c} votes</div><button class="danger remove" onclick="removeLevel(${Number(l.id)})">Remove</button></div>`;
-  }).join("");
-}
-
-async function removeLevel(id){
-  alert("Level removal is temporarily disabled on the shared version. We will add owner/admin controls next.");
-}
-
-async function playerSignUp(){
-  const email=document.getElementById("playerEmail").value.trim(),password=document.getElementById("playerPassword").value,status=document.getElementById("playerAuthStatus");
-  if(!email||password.length<6){status.textContent="Enter an email and a password with at least 6 characters.";return}
-  status.textContent="Creating account...";
-  const {data,error}=await db.auth.signUp({email,password});
-  if(error){status.textContent="Sign-up failed: "+error.message;return}
-  if(data.session){await setupPlayer(data.user);status.textContent="Account created!";}
-  else status.textContent="Account created. Check your email if confirmation is required, then log in.";
-}
-async function playerSignIn(){
-  const email=document.getElementById("playerEmail").value.trim(),password=document.getElementById("playerPassword").value,status=document.getElementById("playerAuthStatus");
-  if(!email||!password){status.textContent="Enter your email and password.";return}
-  status.textContent="Logging in...";
-  const {data,error}=await db.auth.signInWithPassword({email,password});
-  if(error){status.textContent="Login failed: "+error.message;return}
-  await setupPlayer(data.user);status.textContent="";
-}
-async function setupPlayer(user){
-  playerUser=user;
-  const {data,error}=await db.from("players").select("id,username").eq("user_id",user.id).maybeSingle();
-  if(error){document.getElementById("playerAuthStatus").textContent="Could not load player profile: "+error.message;return}
-  playerProfile=data;
-  document.getElementById("playerAuthArea").style.display="none";
-  document.getElementById("playerArea").style.display="block";
-  document.getElementById("usernameInput").value=data?.username||"";
-  await loadPlayerData();
-}
-async function saveUsername(){
-  const username=document.getElementById("usernameInput").value.trim(),status=document.getElementById("playerStatus");
-  if(!/^[A-Za-z0-9_ -]{2,24}$/.test(username)){status.textContent="Username must be 2–24 characters using letters, numbers, spaces, _ or -.";return}
-  const {data,error}=await db.rpc("set_player_username",{p_username:username});
-  if(error){status.textContent="Could not save username: "+error.message;return}
-  playerProfile=data;status.textContent="Username saved!";await loadPlayerData();
-}
-async function playerLogout(){await db.auth.signOut();playerUser=null;playerProfile=null;document.getElementById("playerArea").style.display="none";document.getElementById("playerAuthArea").style.display="block";document.getElementById("playerAuthStatus").textContent="Logged out.";}
-async function loadPlayerData(){
-  const {data,error}=await db.from("completions").select("id,level_id,created_at").eq("player_id",playerProfile.id).order("created_at",{ascending:false});
-  if(error){document.getElementById("playerStatus").textContent="Could not load completions: "+error.message;return}
-  const completed=new Set((data||[]).map(x=>Number(x.level_id)));
-  document.getElementById("playerStats").innerHTML=`${completed.size} level${completed.size===1?'':'s'} completed`;
-  const rows=(data||[]).map(c=>{const l=levels.find(x=>x.id===Number(c.level_id));return l?`<div class="completion-row"><div><b>${escapeHTML(l.name)}</b><div class="meta">ID ${l.id} • Current rank #${rankOf(l.id)}</div></div><button class="small-btn danger" onclick="removeCompletion(${Number(l.id)})">Remove</button></div>`:''}).filter(Boolean).join("");
-  document.getElementById("myCompletions").innerHTML=rows||'<div class="empty">You have not recorded any completions yet.</div>';
-}
-async function markCompletion(levelId){
-  if(!playerUser){alert("Log in to a player account first.");return}
-  if(!playerProfile){alert("Choose a username first.");return}
-  const {error}=await db.rpc("add_completion",{p_level_id:Number(levelId)});
-  if(error){alert("Could not record completion: "+error.message);return}
-  await loadPlayerData();renderCompletionSearch();
-}
-async function removeCompletion(levelId){
-  const {error}=await db.rpc("remove_completion",{p_level_id:Number(levelId)});
-  if(error){alert("Could not remove completion: "+error.message);return}
-  await loadPlayerData();renderCompletionSearch();
-}
-async function renderCompletionSearch(){
-  const q=document.getElementById("completionSearch").value.trim().toLowerCase(),out=document.getElementById("completionSearchResults");
-  if(!q){out.innerHTML="";return}
-  const shown=sortedLevels().filter(l=>l.name.toLowerCase().includes(q)||String(l.id).includes(q)).slice(0,12);
-  if(!shown.length){out.innerHTML='<div class="empty">No levels found.</div>';return}
-  const ids=shown.map(l=>l.id);
-  const {data,error}=await db.from("completions").select("level_id,players(username)").in("level_id",ids).order("created_at",{ascending:false});
-  if(error){out.innerHTML='<div class="status">Could not load completion data.</div>';return}
-  const grouped=new Map();(data||[]).forEach(c=>{if(!grouped.has(Number(c.level_id)))grouped.set(Number(c.level_id),[]);if(c.players?.username)grouped.get(Number(c.level_id)).push(c.players.username)});
-  out.innerHTML=shown.map(l=>{const names=grouped.get(l.id)||[];return `<div class="player-profile"><b>${escapeHTML(l.name)}</b><div class="meta">ID ${l.id} • Current rank #${rankOf(l.id)}</div><div class="meta">${names.length} player${names.length===1?'':'s'} recorded</div><div class="completion-list">${names.slice(0,20).map(n=>`<div class="completion-row"><span>${escapeHTML(n)}</span></div>`).join("")||'<div class="empty">No completions recorded yet.</div>'}</div>${playerUser?`<button class="small-btn primary" onclick="markCompletion(${Number(l.id)})">✓ I beat this level</button>`:''}</div>`}).join("");
-}
-async function restorePlayerSession(){
-  const {data}=await db.auth.getSession();if(!data.session)return;
-  const {data:p}=await db.from("players").select("id,username").eq("user_id",data.session.user.id).maybeSingle();
-  if(p){await setupPlayer(data.session.user);}
-}
-
-async function ownerLogin(){
-  const email=document.getElementById("ownerEmail").value.trim();
-  const password=document.getElementById("ownerPassword").value;
-  const status=document.getElementById("ownerLoginStatus");
-  if(!email||!password){status.textContent="Enter your owner email and password.";return}
-  status.textContent="Signing in...";
-  const {data,error}=await db.auth.signInWithPassword({email,password});
-  if(error){status.textContent="Login failed: "+error.message;return}
-  const {data:owner,error:ownerError}=await db.from("owner_users").select("user_id").eq("user_id",data.user.id).maybeSingle();
-  if(ownerError||!owner){
-    await db.auth.signOut();
-    status.textContent="This account is not authorized as the owner.";
-    return;
-  }
-  ownerUser=data.user;
-  document.getElementById("ownerLoginArea").style.display="none";
-  document.getElementById("ownerEditor").style.display="block";
-  document.getElementById("ownerEmail").value="";
-  document.getElementById("ownerPassword").value="";
-  status.textContent="";
-  await loadBaseline();
-}
-
-async function ownerLogout(){
-  await db.auth.signOut();
-  ownerUser=null;
-  document.getElementById("ownerEditor").style.display="none";
-  document.getElementById("ownerLoginArea").style.display="block";
-  document.getElementById("ownerLoginStatus").textContent="Logged out.";
-}
-
-let baselineOrder=[];
-
-function renderBaselineEditor(){
-  const list=document.getElementById("baselineList");
-  if(!list)return;
-  const byId=new Map(levels.map(l=>[String(l.id),l]));
-  const ordered=[];
-  const seen=new Set();
-  for(const id of baselineOrder){const level=byId.get(String(id));if(level&&!seen.has(String(id))){ordered.push(level);seen.add(String(id));}}
-  for(const level of levels){if(!seen.has(String(level.id))){ordered.push(level);seen.add(String(level.id));}}
-  if(!ordered.length){list.innerHTML='<div class="baseline-empty">No levels have been added to The List yet.</div>';document.getElementById("baselineCount").textContent="0 levels shown.";return;}
-  list.innerHTML=ordered.map((l,i)=>`<div class="baseline-item" draggable="true" data-id="${Number(l.id)}"><div class="drag-handle">☰</div><div><div class="name">${escapeHTML(l.name)}</div><div class="meta">ID ${escapeHTML(l.id)}${i<baselineOrder.length?' • Saved in baseline':' • New / unranked'}</div></div><div class="baseline-position">#${i+1}</div></div>`).join("");
-  attachBaselineDragHandlers();
-  document.getElementById("baselineCount").textContent=`${ordered.length} level${ordered.length===1?'':'s'} shown. Drag to reorder; new levels are automatically included.`;
-}
-
-function attachBaselineDragHandlers(){
-  const list=document.getElementById("baselineList");
-  let dragged=null;
-  list.querySelectorAll('.baseline-item').forEach(item=>{
-    item.addEventListener('dragstart',()=>{dragged=item;item.classList.add('dragging')});
-    item.addEventListener('dragend',()=>{item.classList.remove('dragging');dragged=null;rebuildBaselineOrderFromDOM()});
-    item.addEventListener('dragover',e=>{e.preventDefault();if(!dragged||dragged===item)return;const rect=item.getBoundingClientRect();if(e.clientY>rect.top+rect.height/2)item.after(dragged);else item.before(dragged);});
-  });
-}
-
-function rebuildBaselineOrderFromDOM(){
-  baselineOrder=[...document.querySelectorAll('#baselineList .baseline-item')].map(x=>Number(x.dataset.id));
-  [...document.querySelectorAll('#baselineList .baseline-position')].forEach((el,i)=>el.textContent='#'+(i+1));
-}
-
-async function loadBaseline(){
-  const status=document.getElementById("baselineStatus");
-  status.textContent="Loading shared baseline...";
-  const {data,error}=await db.from("owner_baseline").select("level_id,baseline_rank").order("baseline_rank",{ascending:true});
-  if(error){status.textContent="Could not load baseline: "+error.message;return;}
-  baselineOrder=(data||[]).map(x=>Number(x.level_id));
-  renderBaselineEditor();
-  status.textContent="Shared baseline loaded.";
-}
-
-async function saveBaseline(){
-  const status=document.getElementById("baselineStatus");
-  rebuildBaselineOrderFromDOM();
-  const ids=baselineOrder.filter(id=>levels.some(l=>l.id===id));
-  if(!ids.length){status.textContent="Add at least one level before saving the baseline.";return;}
-  if(!confirm(`Save ${ids.length} level${ids.length===1?'':'s'} in this order as the shared owner baseline?`))return;
-  status.textContent="Saving shared baseline...";
-  const {data,error}=await db.rpc("set_owner_baseline",{p_level_ids:ids});
-  if(error){status.textContent="Could not save baseline: "+error.message;return;}
-  baselineOrder=ids;
-  status.textContent=`Saved ${data.count} baseline position${data.count===1?'':'s'} to Supabase.`;
-  await refresh();
-  await loadBaseline();
-}
-
-async function restoreOwnerSession(){
-  const {data}=await db.auth.getSession();
-  if(!data.session)return;
-  const user=data.session.user;
-  const {data:owner}=await db.from("owner_users").select("user_id").eq("user_id",user.id).maybeSingle();
-  if(owner){
-    ownerUser=user;
-    document.getElementById("ownerLoginArea").style.display="none";
-    document.getElementById("ownerEditor").style.display="block";
-    await loadBaseline();
-  }else{
-    await db.auth.signOut();
-  }
-}
-
-async function refresh(){
-  try{
-    await loadLevels();
-    document.getElementById("connectionDot").classList.add("online");
-    document.getElementById("connectionText").textContent="Connected to the shared ranking";
-    document.getElementById("stats").innerHTML=`${levels.length} levels • Shared community rankings`;
-    renderList();await renderCompare();if(ownerUser) renderBaselineEditor();
-  }catch(e){
-    document.getElementById("connectionDot").classList.remove("online");
-    document.getElementById("connectionText").textContent="Database connection failed";
-    document.getElementById("stats").textContent="Could not load the shared ranking.";
-    document.getElementById("list").innerHTML='<div class="empty">Could not connect to Supabase. Check your project settings and SQL setup.</div>';
-    console.error(e);
-  }
-}
-
-function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-
-db.auth.onAuthStateChange(async (event,session)=>{
-  if(event==="SIGNED_OUT"){
-    ownerUser=null; playerUser=null; playerProfile=null;
-    document.getElementById("playerArea").style.display="none";
-    document.getElementById("playerAuthArea").style.display="block";
-    document.getElementById("ownerEditor").style.display="none";
-    document.getElementById("ownerLoginArea").style.display="block";
-  }
-});
-
-(async()=>{await refresh();await restoreOwnerSession();await restorePlayerSession();})();
-</script>
+<script src="app.js"></script>
 </body>
 </html>

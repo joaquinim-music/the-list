@@ -22,6 +22,7 @@ button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weigh
 .connection{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-size:13px;color:#aeb7c9}.dot{width:9px;height:9px;border-radius:50%;background:#777}.dot.online{background:#61d48a}
 .owner-login{display:flex;gap:10px;flex-wrap:wrap}.owner-login input{min-width:220px}.owner-badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#2b3242;color:#cfd6e5;font-size:12px;margin-bottom:12px}.baseline-count{margin-top:10px;color:#aeb7c9;font-size:13px}.baseline-list{display:flex;flex-direction:column;gap:8px;margin:14px 0;max-height:520px;overflow:auto;padding-right:4px}.baseline-item{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;background:#11151d;border:1px solid #303747;border-radius:10px;padding:10px 12px;cursor:grab;user-select:none}.baseline-item:active{cursor:grabbing}.baseline-item.dragging{opacity:.45}.drag-handle{font-size:20px;color:#7f8aa0;text-align:center}.baseline-item .name{font-weight:bold}.baseline-item .meta{font-size:12px;color:#808ba0;margin-top:3px}.baseline-position{font-weight:bold;color:#aeb7c9;min-width:38px;text-align:right}.baseline-empty{padding:18px;text-align:center;color:#8994aa;border:1px dashed #343c4f;border-radius:10px}
 @media(max-width:720px){.compare{grid-template-columns:1fr}.vs{height:20px}.row{grid-template-columns:45px 1fr 80px}.row .comp,.row .remove{display:none}h1{font-size:32px}.owner-login{flex-direction:column}.owner-login input,.owner-login button{width:100%}}
+.players-panel{border-color:#394a68}.player-auth{display:flex;gap:10px;flex-wrap:wrap}.player-auth input{min-width:190px}.player-profile{background:#11151d;border:1px solid #303747;border-radius:12px;padding:15px;margin-top:14px}.completion-list{display:flex;flex-direction:column;gap:7px;margin-top:12px}.completion-row{display:flex;justify-content:space-between;gap:10px;align-items:center;background:#11151d;border:1px solid #303747;border-radius:9px;padding:10px}.player-table{width:100%;border-collapse:collapse;margin-top:12px}.player-table th,.player-table td{text-align:left;padding:10px;border-bottom:1px solid #303747}.player-table th{color:#9da7ba;font-size:12px}.small-btn{padding:7px 10px;font-size:12px}.player-search{margin-top:12px}.completion-status{font-size:12px;color:#9da7ba;margin-top:8px}@media(max-width:720px){.player-table{font-size:13px}.player-table th:nth-child(3),.player-table td:nth-child(3){display:none}.completion-row{flex-direction:column;align-items:flex-start}.player-auth input,.player-auth button{width:100%}}
 </style>
 </head>
 <body>
@@ -51,6 +52,37 @@ button{background:#2b3242;color:#fff;padding:11px 16px;cursor:pointer;font-weigh
 <div><h2 style="margin-bottom:4px">🏆 The List</h2><div class="stats" id="stats"></div></div>
 </div>
 <div style="height:14px"></div><div class="list" id="list"></div>
+</section>
+
+<section class="panel players-panel">
+<h2>🏆 Player Stats & Completions</h2>
+<p class="muted">Create a username, record the levels you've beaten, and see who has completed each level. Completions are currently self-reported.</p>
+<div id="playerAuthArea">
+  <div class="player-auth">
+    <input id="playerEmail" type="email" placeholder="Email" autocomplete="email">
+    <input id="playerPassword" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="primary" onclick="playerSignUp()">Create Account</button>
+    <button onclick="playerSignIn()">Log In</button>
+  </div>
+  <div class="status" id="playerAuthStatus"></div>
+</div>
+<div id="playerArea" style="display:none">
+  <div class="player-profile">
+    <div><span class="owner-badge">👤 Player</span></div>
+    <div class="controls">
+      <input id="usernameInput" placeholder="Choose a username">
+      <button class="primary" onclick="saveUsername()">Save Username</button>
+      <button onclick="playerLogout()">Log Out</button>
+    </div>
+    <div class="status" id="playerStatus"></div>
+    <div id="playerStats" class="stats"></div>
+    <div class="completion-list" id="myCompletions"></div>
+  </div>
+</div>
+<div class="player-search">
+  <input id="completionSearch" placeholder="Search a level to see who beat it..." oninput="renderCompletionSearch()">
+  <div id="completionSearchResults"></div>
+</div>
 </section>
 
 <section class="panel admin">
@@ -85,7 +117,7 @@ const SUPABASE_URL = "https://ifufmrgoknrqwbtxydmr.supabase.co";
 const SUPABASE_KEY = "sb_publishable_KXTCeSGR9LIpvqr15TOXBw_fIK9X1Rx";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let levels=[], currentPair=null, ownerUser=null;
+let levels=[], currentPair=null, ownerUser=null, playerUser=null, playerProfile=null, allCompletions=[];
 
 async function loadLevels(){
   const {data,error}=await db.from("levels").select("*").order("rating",{ascending:false});
@@ -105,45 +137,14 @@ async function loadHistory(){
 
 function chooseComparison(history){
   if(levels.length<2)return null;
-
-  // Pick a target with a strong preference for levels that have
-  // relatively few comparisons, while still giving every level
-  // a chance to be selected.
-  const weighted=levels.map(level=>{
-    const c=level.comparisons||0;
-    const uncertainty=1/Math.sqrt(c+1);
-    const baselineBonus=level.baseline_rank ? 1.15 : 1;
-    return {level,weight:uncertainty*baselineBonus};
+  const pool=[...levels].sort((a,b)=>(a.comparisons||0)-(b.comparisons||0));
+  const target=pool[Math.floor(Math.random()*Math.min(3,pool.length))];
+  const candidates=levels.filter(x=>x.id!==target.id).sort((a,b)=>{
+    const ah=history.has(pairKey(target.id,a.id)), bh=history.has(pairKey(target.id,b.id));
+    if(ah!==bh)return ah?1:-1;
+    return Math.abs(a.rating-target.rating)-Math.abs(b.rating-target.rating);
   });
-
-  const total=weighted.reduce((sum,x)=>sum+x.weight,0);
-  let roll=Math.random()*total;
-  let target=weighted[weighted.length-1].level;
-  for(const item of weighted){
-    roll-=item.weight;
-    if(roll<=0){target=item.level;break;}
-  }
-
-  // Prefer opponents close in rating, but give under-tested levels
-  // a boost and strongly discourage repeating the same matchup.
-  const opponents=levels.filter(x=>x.id!==target.id).map(level=>{
-    const distance=Math.abs(level.rating-target.rating);
-    const repeated=history.has(pairKey(target.id,level.id));
-    const targetVotes=target.comparisons||0;
-    const opponentVotes=level.comparisons||0;
-
-    const distanceScore=1/(1+distance/110);
-    const lowVoteBonus=1+180/Math.sqrt((targetVotes+1)*(opponentVotes+1));
-    const repeatMultiplier=repeated?0.12:1;
-
-    return {
-      level,
-      score:distanceScore*lowVoteBonus*repeatMultiplier,
-      distance
-    };
-  }).sort((a,b)=>b.score-a.score || a.distance-b.distance);
-
-  return [target,opponents[0].level];
+  return [target,candidates[0]];
 }
 
 function cardHTML(l){
@@ -194,6 +195,78 @@ function renderList(){
 
 async function removeLevel(id){
   alert("Level removal is temporarily disabled on the shared version. We will add owner/admin controls next.");
+}
+
+async function playerSignUp(){
+  const email=document.getElementById("playerEmail").value.trim(),password=document.getElementById("playerPassword").value,status=document.getElementById("playerAuthStatus");
+  if(!email||password.length<6){status.textContent="Enter an email and a password with at least 6 characters.";return}
+  status.textContent="Creating account...";
+  const {data,error}=await db.auth.signUp({email,password});
+  if(error){status.textContent="Sign-up failed: "+error.message;return}
+  if(data.session){await setupPlayer(data.user);status.textContent="Account created!";}
+  else status.textContent="Account created. Check your email if confirmation is required, then log in.";
+}
+async function playerSignIn(){
+  const email=document.getElementById("playerEmail").value.trim(),password=document.getElementById("playerPassword").value,status=document.getElementById("playerAuthStatus");
+  if(!email||!password){status.textContent="Enter your email and password.";return}
+  status.textContent="Logging in...";
+  const {data,error}=await db.auth.signInWithPassword({email,password});
+  if(error){status.textContent="Login failed: "+error.message;return}
+  await setupPlayer(data.user);status.textContent="";
+}
+async function setupPlayer(user){
+  playerUser=user;
+  const {data,error}=await db.from("players").select("id,username").eq("user_id",user.id).maybeSingle();
+  if(error){document.getElementById("playerAuthStatus").textContent="Could not load player profile: "+error.message;return}
+  playerProfile=data;
+  document.getElementById("playerAuthArea").style.display="none";
+  document.getElementById("playerArea").style.display="block";
+  document.getElementById("usernameInput").value=data?.username||"";
+  await loadPlayerData();
+}
+async function saveUsername(){
+  const username=document.getElementById("usernameInput").value.trim(),status=document.getElementById("playerStatus");
+  if(!/^[A-Za-z0-9_ -]{2,24}$/.test(username)){status.textContent="Username must be 2–24 characters using letters, numbers, spaces, _ or -.";return}
+  const {data,error}=await db.rpc("set_player_username",{p_username:username});
+  if(error){status.textContent="Could not save username: "+error.message;return}
+  playerProfile=data;status.textContent="Username saved!";await loadPlayerData();
+}
+async function playerLogout(){await db.auth.signOut();playerUser=null;playerProfile=null;document.getElementById("playerArea").style.display="none";document.getElementById("playerAuthArea").style.display="block";document.getElementById("playerAuthStatus").textContent="Logged out.";}
+async function loadPlayerData(){
+  const {data,error}=await db.from("completions").select("id,level_id,created_at").eq("player_id",playerProfile.id).order("created_at",{ascending:false});
+  if(error){document.getElementById("playerStatus").textContent="Could not load completions: "+error.message;return}
+  const completed=new Set((data||[]).map(x=>Number(x.level_id)));
+  document.getElementById("playerStats").innerHTML=`${completed.size} level${completed.size===1?'':'s'} completed`;
+  const rows=(data||[]).map(c=>{const l=levels.find(x=>x.id===Number(c.level_id));return l?`<div class="completion-row"><div><b>${escapeHTML(l.name)}</b><div class="meta">ID ${l.id} • Current rank #${rankOf(l.id)}</div></div><button class="small-btn danger" onclick="removeCompletion(${Number(l.id)})">Remove</button></div>`:''}).filter(Boolean).join("");
+  document.getElementById("myCompletions").innerHTML=rows||'<div class="empty">You have not recorded any completions yet.</div>';
+}
+async function markCompletion(levelId){
+  if(!playerUser){alert("Log in to a player account first.");return}
+  if(!playerProfile){alert("Choose a username first.");return}
+  const {error}=await db.rpc("add_completion",{p_level_id:Number(levelId)});
+  if(error){alert("Could not record completion: "+error.message);return}
+  await loadPlayerData();renderCompletionSearch();
+}
+async function removeCompletion(levelId){
+  const {error}=await db.rpc("remove_completion",{p_level_id:Number(levelId)});
+  if(error){alert("Could not remove completion: "+error.message);return}
+  await loadPlayerData();renderCompletionSearch();
+}
+async function renderCompletionSearch(){
+  const q=document.getElementById("completionSearch").value.trim().toLowerCase(),out=document.getElementById("completionSearchResults");
+  if(!q){out.innerHTML="";return}
+  const shown=sortedLevels().filter(l=>l.name.toLowerCase().includes(q)||String(l.id).includes(q)).slice(0,12);
+  if(!shown.length){out.innerHTML='<div class="empty">No levels found.</div>';return}
+  const ids=shown.map(l=>l.id);
+  const {data,error}=await db.from("completions").select("level_id,players(username)").in("level_id",ids).order("created_at",{ascending:false});
+  if(error){out.innerHTML='<div class="status">Could not load completion data.</div>';return}
+  const grouped=new Map();(data||[]).forEach(c=>{if(!grouped.has(Number(c.level_id)))grouped.set(Number(c.level_id),[]);if(c.players?.username)grouped.get(Number(c.level_id)).push(c.players.username)});
+  out.innerHTML=shown.map(l=>{const names=grouped.get(l.id)||[];return `<div class="player-profile"><b>${escapeHTML(l.name)}</b><div class="meta">ID ${l.id} • Current rank #${rankOf(l.id)}</div><div class="meta">${names.length} player${names.length===1?'':'s'} recorded</div><div class="completion-list">${names.slice(0,20).map(n=>`<div class="completion-row"><span>${escapeHTML(n)}</span></div>`).join("")||'<div class="empty">No completions recorded yet.</div>'}</div>${playerUser?`<button class="small-btn primary" onclick="markCompletion(${Number(l.id)})">✓ I beat this level</button>`:''}</div>`}).join("");
+}
+async function restorePlayerSession(){
+  const {data}=await db.auth.getSession();if(!data.session)return;
+  const {data:p}=await db.from("players").select("id,username").eq("user_id",data.session.user.id).maybeSingle();
+  if(p){await setupPlayer(data.session.user);}
 }
 
 async function ownerLogin(){
@@ -318,13 +391,15 @@ function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":
 
 db.auth.onAuthStateChange(async (event,session)=>{
   if(event==="SIGNED_OUT"){
-    ownerUser=null;
+    ownerUser=null; playerUser=null; playerProfile=null;
+    document.getElementById("playerArea").style.display="none";
+    document.getElementById("playerAuthArea").style.display="block";
     document.getElementById("ownerEditor").style.display="none";
     document.getElementById("ownerLoginArea").style.display="block";
   }
 });
 
-(async()=>{await refresh();await restoreOwnerSession();})();
+(async()=>{await refresh();await restoreOwnerSession();await restorePlayerSession();})();
 </script>
 </body>
 </html>

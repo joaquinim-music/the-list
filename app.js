@@ -19,7 +19,7 @@ function renderList(){
   $("levelList").innerHTML=filtered.map((l,i)=>`<div class="level-row">
     <div class="rank">#${levels.indexOf(l)+1}</div>
     <div class="level-main"><h3><a href="level.html?id=${l.id}">${esc(l.name)}</a></h3>
-    <div class="level-meta">ID ${l.id} · ${esc(l.creator||"Unknown creator")} · ${Math.round(l.rating)} rating · ${l.comparisons||0} comparisons</div></div>
+    <div class="level-meta">ID ${l.id} · ${esc(l.creator||"Unknown creator")} · ${Math.round(l.rating)} rating · ${l.comparisons||0} comparisons${l.downloads!=null?` · ${Number(l.downloads).toLocaleString()} downloads`:""}</div></div>
   </div>`).join("")||`<div class="empty">No levels found.</div>`;
 }
 function chooseComparison(){
@@ -58,7 +58,11 @@ async function addLevel(){
     const r=await fetch(`https://gdbrowser.com/api/level/${id}`);
     if(!r.ok)throw new Error("That level could not be found.");
     const d=await r.json();
-    const {error}=await db.from("levels").insert({id,name:d.name||`Level ${id}`,creator:d.author||"Unknown",rating:1500,comparisons:0});
+    const downloads=Number(d.downloads||0);
+    if(!Number.isFinite(downloads) || downloads<1000){
+      throw new Error(`This level only has ${downloads.toLocaleString()} downloads. Levels need at least 1,000 downloads to be submitted.`);
+    }
+    const {error}=await db.from("levels").insert({id,name:d.name||`Level ${id}`,creator:d.author||"Unknown",downloads,rating:1500,comparisons:0});
     if(error)throw error;
     $("addLevelStatus").textContent=`Added ${d.name||id}.`;
     $("addLevelId").value=""; await loadLevels();

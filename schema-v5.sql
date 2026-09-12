@@ -46,3 +46,22 @@ grant select on public.player_stats_v5 to anon,authenticated;
 insert into public.rating_history(level_id,rating,comparisons)
 select l.id,l.rating,l.comparisons from public.levels l
 where not exists(select 1 from public.rating_history h where h.level_id=l.id);
+
+-- Minimum popularity requirement for newly submitted levels.
+alter table public.levels
+add column if not exists downloads integer;
+
+-- Only allow newly submitted levels to be inserted when their reported
+-- GDBrowser download count is at least 1,000. The frontend checks GDBrowser
+-- first and stores that count with the level.
+drop policy if exists "Public can add levels" on public.levels;
+create policy "Public can add levels"
+on public.levels
+for insert
+to anon, authenticated
+with check (
+  rating = 1500
+  and comparisons = 0
+  and baseline_rank is null
+  and downloads >= 1000
+);

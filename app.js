@@ -30,7 +30,7 @@ function chooseComparison(){
   const opponents=levels.filter(x=>x.id!==target.id).map(level=>{
     const distance=Math.abs(level.rating-target.rating);
     const repeated=history.has(pairKey(target.id,level.id));
-    return {level,score:(1/(1+distance/110))*(1+180/Math.sqrt((target.comparisons+1)*(level.comparisons+1)))*(repeated?.12:1),distance};
+    return {level,score:(1/(1+distance/120))*(1+180/Math.sqrt((target.comparisons+1)*(level.comparisons+1)))*(repeated?.08:1),distance};
   }).sort((a,b)=>b.score-a.score||a.distance-b.distance);
   return [target,opponents[0].level];
 }

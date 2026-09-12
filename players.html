@@ -1,90 +1,10 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>The List — Players</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<header class="topbar">
-  <div class="brand">THE LIST</div>
-  <nav>
-    <a href="index.html">Rankings</a>
-    <a class="active" href="players.html">Players</a><a href="admin.html">Admin</a>
-  </nav>
-</header>
-
-<main class="container">
-  <section class="hero">
-    <div>
-      <p class="eyebrow">PLAYER STATS</p>
-      <h1>Victors & profiles.</h1>
-      <p>Verified completions backed by YouTube proof.</p>
-    </div>
-  </section>
-
-  <section class="grid two">
-    <article class="panel">
-      <h2>Account</h2>
-      <div class="form-row">
-        <input id="playerEmail" type="email" placeholder="Username">
-        <input id="playerPassword" type="password" placeholder="Password">
-      </div>
-      <div class="form-row">
-        <button id="signUpBtn">Create Account</button>
-        <button id="loginBtn" class="secondary">Log In</button>
-        <button id="logoutBtn" class="secondary hidden">Log Out</button>
-      </div>
-      <div id="authStatus" class="status"></div>
-      <div id="usernameArea" class="hidden">
-        <input id="usernameInput" maxlength="24" placeholder="Choose a username">
-        <button id="saveUsernameBtn">Save Username</button>
-      </div>
-      <div id="profileSummary"></div>
-    </article>
-
-    <article class="panel">
-      <h2>Submit a Completion</h2>
-      <p class="muted">A YouTube proof link is required. Your submission will stay pending until the owner reviews it.</p>
-      <div class="form-row">
-        <input id="completionLevelId" inputmode="numeric" placeholder="Level ID">
-        <input id="youtubeUrl" type="url" placeholder="YouTube link">
-      </div>
-      <button id="submitCompletionBtn">Submit for Review</button>
-      <div id="completionStatus" class="status"></div>
-    </article>
-  </section>
-
-  <section class="panel">
-    <div class="section-head">
-      <div><h2>Player Leaderboard</h2><p class="muted">Verified completions only.</p></div>
-    </div>
-    <div id="playerLeaderboard">Loading...</div>
-  </section>
-
-  <section class="panel">
-    <h2>My Completions</h2>
-    <div id="myCompletions">Log in to see your submissions.</div>
-  </section>
-
-  <section class="panel">
-    <h2>Find Victors</h2>
-    <div class="form-row">
-      <input id="victorLevelId" inputmode="numeric" placeholder="Level ID">
-      <button id="findVictorsBtn">Find</button>
-    </div>
-    <div id="victorResults"></div>
-  </section>
-
-  <section id="reviewPanel" class="panel hidden">
-    <h2>Owner — Completion Review</h2>
-    <p class="muted">Watch the proof, then accept or reject each pending submission.</p>
-    <div id="pendingSubmissions">Loading...</div>
-  </section>
-</main>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="players.js"></script>
-</body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The List — Players</title><link rel="stylesheet" href="styles.css"></head><body>
+<header class="topbar"><div class="brand">THE LIST</div><nav><a href="index.html">Rankings</a><a class="active" href="players.html">Players</a><a href="compare.html">Compare</a><a href="stats.html">Stats</a><a href="admin.html">Admin</a></nav></header>
+<main class="container"><section class="hero"><div><p class="eyebrow">THE LIST PLAYERS</p><h1>Player leaderboard.</h1><p>Ranked by verified completions and the difficulty of what each player has beaten.</p></div></section>
+<section class="panel leaderboard-hero"><div class="leaderboard-tools"><input id="playerSearch" type="search" placeholder="Search players..."><select id="leaderSort"><option value="score">Difficulty score</option><option value="beaten">Levels beaten</option><option value="hardest">Hardest level</option><option value="recent">Recently active</option></select></div><div class="leaderboard-explainer"><b>How scoring works:</b> verified completions earn more points when the level has a higher List rating. Rejected and pending submissions never count.</div><div id="fullLeaderboard">Loading leaderboard...</div></section>
+<section class="grid two"><article class="panel"><h2>Player Account</h2><div class="form-row"><input id="playerEmail" type="email" placeholder="Email (private)"><input id="playerPassword" type="password" placeholder="Password"></div><div class="form-row"><button id="signUpBtn">Create Account</button><button id="loginBtn" class="secondary">Log In</button><button id="logoutBtn" class="secondary hidden">Log Out</button></div><div id="authStatus" class="status"></div><div id="usernameArea" class="hidden"><input id="usernameInput" maxlength="24" placeholder="Choose a username"><button id="saveUsernameBtn">Save Username</button></div><div id="profileSummary"></div></article>
+<article class="panel"><h2>Submit a Completion</h2><p class="muted">Submit a YouTube proof video. The owner reviews it before it appears on profiles or the leaderboard.</p><div class="form-row"><input id="completionLevelId" inputmode="numeric" placeholder="Level ID"><input id="youtubeUrl" type="url" placeholder="YouTube link"></div><button id="submitCompletionBtn">Submit for Review</button><div id="completionStatus" class="status"></div></article></section>
+<section class="panel"><h2>My Completions</h2><div id="myCompletions">Log in to see your submissions.</div></section>
+<section class="panel"><h2>Find Victors</h2><div class="form-row"><input id="victorLevelId" inputmode="numeric" placeholder="Level ID"><button id="findVictorsBtn">Find</button></div><div id="victorResults"></div></section>
+<section id="reviewPanel" class="panel hidden"><h2>Owner — Completion Review</h2><p class="muted">Review proof submissions from here, or use the Admin page for the full moderation queue.</p><div id="pendingSubmissions">Loading...</div></section>
+</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="players.js"></script></body></html>

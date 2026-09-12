@@ -3,7 +3,7 @@ const SUPABASE_KEY="sb_publishable_KXTCeSGR9LIpvqr15TOXBw_fIK9X1Rx";
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 let levels=[];
-let baseline=[];
+let baseline=[];let draggingRow=null;
 
 const $=id=>document.getElementById(id);
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -34,13 +34,8 @@ async function loadLevels(){
   renderBaseline();
 }
 
-function renderStats(){
-  $("admin-stats").innerHTML=`
-    <div class="stat-card"><strong>${levels.length}</strong><span>Total Levels</span></div>
-    <div class="stat-card"><strong>${levels.reduce((n,x)=>n+(x.comparisons||0),0)}</strong><span>Total Level Comparisons</span></div>
-    <div class="stat-card"><strong>${baseline.length}</strong><span>Baseline Levels</span></div>
-  `;
-}
+function renderStats(){const totalComparisons=Math.round(levels.reduce((n,x)=>n+(x.comparisons||0),0)/2);$('admin-stats').innerHTML=`<div class="stat-card"><strong>${levels.length}</strong><span>Total Levels</span></div><div class="stat-card"><strong>${totalComparisons}</strong><span>Comparisons</span></div><div class="stat-card"><strong>${baseline.length}</strong><span>Baseline Levels</span></div>`;loadAdminCounts()}
+async function loadAdminCounts(){const q=await db.from('completions').select('id',{count:'exact',head:true}).eq('status','pending');const card=document.createElement('div');card.className='stat-card';card.innerHTML=`<strong>${q.count||0}</strong><span>Pending Completions</span>`;if(!$('admin-stats').querySelector('.pending-stat')){card.classList.add('pending-stat');$('admin-stats').appendChild(card)}}
 
 function renderLevels(){
   const q=($("level-filter").value||"").trim().toLowerCase();
@@ -106,32 +101,8 @@ async function loadCompletions(){
   });
 }
 
-function renderBaseline(){
-  const el=$("admin-baseline-list");
-  if(!el) return;
-  el.innerHTML=baseline.map((l,i)=>`
-    <div class="admin-row baseline-admin-row" data-id="${l.id}">
-      <span class="baseline-rank">#${i+1}</span>
-      <div class="admin-main"><strong>${esc(l.name)}</strong><span class="muted">Rating ${Number(l.rating).toFixed(0)}</span></div>
-      <div class="admin-actions">
-        <button class="secondary up" ${i===0?"disabled":""}>↑</button>
-        <button class="secondary down" ${i===baseline.length-1?"disabled":""}>↓</button>
-        <button class="danger remove-baseline">Remove</button>
-      </div>
-    </div>`).join("") || `<p class="muted">No baseline levels yet.</p>`;
-
-  [...el.querySelectorAll(".baseline-admin-row")].forEach((row,i)=>{
-    row.querySelector(".up")?.addEventListener("click",()=>{
-      [baseline[i-1],baseline[i]]=[baseline[i],baseline[i-1]]; renderBaseline();
-    });
-    row.querySelector(".down")?.addEventListener("click",()=>{
-      [baseline[i+1],baseline[i]]=[baseline[i],baseline[i+1]]; renderBaseline();
-    });
-    row.querySelector(".remove-baseline")?.addEventListener("click",()=>{
-      baseline=baseline.filter(x=>x.id!==Number(row.dataset.id)); renderBaseline();
-    });
-  });
-}
+function renderBaseline(){const el=$("admin-baseline-list");if(!el)return;el.innerHTML=baseline.map((l,i)=>`<div class="admin-row baseline-admin-row" draggable="true" data-id="${l.id}"><span class="drag-grip">☰</span><span class="baseline-rank">#${i+1}</span><div class="admin-main"><strong>${esc(l.name)}</strong><span class="muted">ID ${l.id} · Rating ${Number(l.rating).toFixed(0)}</span></div></div>`).join('')||`<p class="muted">No baseline levels yet.</p>`;el.querySelectorAll('.baseline-admin-row').forEach(row=>{row.addEventListener('dragstart',()=>{draggingRow=row;row.classList.add('dragging')});row.addEventListener('dragend',()=>{row.classList.remove('dragging');draggingRow=null;rebuildBaselineFromDom()});row.addEventListener('dragover',e=>{e.preventDefault();if(!draggingRow||draggingRow===row)return;const r=row.getBoundingClientRect();if(e.clientY>r.top+r.height/2)row.after(draggingRow);else row.before(draggingRow)});row.addEventListener('drop',e=>{e.preventDefault();rebuildBaselineFromDom();renderBaseline()})})}
+function rebuildBaselineFromDom(){baseline=[...document.querySelectorAll('#admin-baseline-list .baseline-admin-row')].map(r=>levels.find(l=>Number(l.id)===Number(r.dataset.id))).filter(Boolean)}
 
 $("save-admin-baseline").onclick=async()=>{
   const ids=baseline.map(x=>Number(x.id));

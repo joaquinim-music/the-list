@@ -55,18 +55,19 @@ async function addLevel(){
   if(!Number.isInteger(id)||id<=0){$("addLevelStatus").textContent="Enter a valid level ID.";return}
   $("addLevelStatus").textContent="Looking up level...";
   try{
-    const r=await fetch(`https://gdbrowser.com/api/level/${id}`);
-    if(!r.ok)throw new Error("That level could not be found.");
-    const d=await r.json();
-    const downloads=Number(d.downloads||0);
-    if(!Number.isFinite(downloads) || downloads<1000){
-      throw new Error(`This level only has ${downloads.toLocaleString()} downloads. Levels need at least 1,000 downloads to be submitted.`);
-    }
-    const {error}=await db.from("levels").insert({id,name:d.name||`Level ${id}`,creator:d.author||"Unknown",downloads,rating:1500,comparisons:0});
+    const {data,error}=await db.functions.invoke("submit-level",{body:{id}});
     if(error)throw error;
-    $("addLevelStatus").textContent=`Added ${d.name||id}.`;
+    if(!data?.saved)throw new Error(data?.error||"Level submission failed.");
+    const added=data.level?.name||`Level ${id}`;
+    $("addLevelStatus").textContent=`Added ${added} (${Number(data.downloads||0).toLocaleString()} downloads verified).`;
     $("addLevelId").value=""; await loadLevels();
-  }catch(e){$("addLevelStatus").textContent=e.message||"Lookup failed."}
+  }catch(e){
+    let message=e?.message||"Level submission failed.";
+    if(e?.context?.body){
+      try{const body=await e.context.json();message=body?.error||message}catch{}
+    }
+    $("addLevelStatus").textContent=message;
+  }
 }
 async function ownerLogin(){
   const {data,error}=await db.auth.signInWithPassword({email:$("ownerEmail").value,password:$("ownerPassword").value});

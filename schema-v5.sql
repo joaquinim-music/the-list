@@ -65,3 +65,8 @@ with check (
   and baseline_rank is null
   and downloads >= 1000
 );
+
+-- v5.4: Level submissions are now verified server-side by the Supabase
+-- Edge Function `submit-level`. Public clients must not insert levels directly.
+revoke insert, update, delete on public.levels from anon, authenticated;
+drop policy if exists "Public can add levels" on public.levels;
